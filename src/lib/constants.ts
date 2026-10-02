@@ -1,0 +1,215 @@
+// Catálogo central de estatus, usuarios y colores de la app.
+// Cambiar aquí se refleja en todo el sistema (tablero, mapa, reportes).
+
+export type EstatusKey =
+  | "Pendiente"
+  | "Flete USA"
+  | "Importación / Aduana"
+  | "Flete México"
+  | "Parking / Patio"
+  | "Agencia"
+  | "Entregado"
+  | "Cancelado";
+
+export interface EstatusInfo {
+  key: EstatusKey;
+  label: string;
+  orden: number;
+  /** Color de fondo suave para tarjetas/pastillas */
+  bg: string;
+  /** Color de texto/acento */
+  text: string;
+  /** Color sólido para puntos de mapa y barras */
+  solid: string;
+  descripcion: string;
+}
+
+export const ESTATUS_FLOW: EstatusInfo[] = [
+  {
+    key: "Pendiente",
+    label: "Pendiente",
+    orden: 0,
+    bg: "bg-gray-100",
+    text: "text-gray-700",
+    solid: "#64748b",
+    descripcion: "Aún no se confirma la compra del equipo.",
+  },
+  {
+    key: "Flete USA",
+    label: "Flete USA",
+    orden: 1,
+    bg: "bg-brand-blue-50",
+    text: "text-brand-blue-700",
+    solid: "#3b82f6",
+    descripcion: "En camino hacia la aduana dentro de Estados Unidos.",
+  },
+  {
+    key: "Parking / Patio",
+    label: "Parking / Patio",
+    orden: 2,
+    bg: "bg-gray-200",
+    text: "text-gray-900",
+    solid: "#334155",
+    descripcion: "En patio/parking en espera de siguiente movimiento.",
+  },
+  {
+    key: "Importación / Aduana",
+    label: "Importación / Aduana",
+    orden: 3,
+    bg: "bg-brand-orange-50",
+    text: "text-brand-orange-700",
+    solid: "#f97316",
+    descripcion: "En trámite de importación en la aduana.",
+  },
+  {
+    key: "Agencia",
+    label: "Agencia",
+    orden: 4,
+    bg: "bg-brand-orange-100",
+    text: "text-brand-orange-700",
+    solid: "#c2410c",
+    descripcion: "En trámite con agencia / a punto de entregar.",
+  },
+  {
+    key: "Flete México",
+    label: "Flete México",
+    orden: 5,
+    bg: "bg-brand-blue-100",
+    text: "text-brand-blue-900",
+    solid: "#1d4ed8",
+    descripcion: "Ya cruzó, en camino dentro de México.",
+  },
+  {
+    key: "Entregado",
+    label: "Entregado",
+    orden: 6,
+    bg: "bg-brand-navy",
+    text: "text-white",
+    solid: "#0f2440",
+    descripcion: "Entregado al cliente. Ciclo cerrado.",
+  },
+  {
+    key: "Cancelado",
+    label: "Cancelado",
+    orden: 7,
+    bg: "bg-gray-100",
+    text: "text-gray-500",
+    solid: "#94a3b8",
+    descripcion: "Venta cancelada.",
+  },
+];
+
+export function estatusInfo(key: string): EstatusInfo {
+  return (
+    ESTATUS_FLOW.find((e) => e.key === key) ?? {
+      key: key as EstatusKey,
+      label: key,
+      orden: 99,
+      bg: "bg-gray-100",
+      text: "text-gray-700",
+      solid: "#64748b",
+      descripcion: "",
+    }
+  );
+}
+
+/** Estatus que cuentan como "en movimiento" para el dashboard en tiempo real */
+export const ESTATUS_ACTIVOS: EstatusKey[] = [
+  "Pendiente",
+  "Flete USA",
+  "Parking / Patio",
+  "Importación / Aduana",
+  "Agencia",
+  "Flete México",
+];
+
+export const USUARIOS = ["Jaime Zamudio", "Raúl Favela", "Otro"] as const;
+export type Usuario = (typeof USUARIOS)[number];
+
+export const ADUANAS = [
+  "Calexico Ca",
+  "Laredo Tx",
+  "El Paso Tx",
+  "San Luis Az",
+  "San Diego Ca",
+  "No Importación",
+] as const;
+
+export const TIPOS_UNIDAD = ["CAMION", "AMARILLO"] as const;
+
+export const MESES = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+] as const;
+
+/** Paleta categórica para gráficas con varias series (proveedores, tipos, etc.) */
+export const PALETA_CATEGORICA = [
+  "#2563eb", // azul
+  "#f97316", // naranja
+  "#64748b", // gris
+  "#0284c7", // azul cielo
+  "#d97706", // ámbar
+  "#94a3b8", // gris claro ("Otros")
+];
+
+export function formatMXN(value: number): string {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value ?? 0);
+}
+
+/** Pesos mexicanos reales (para el total convertido con el tipo de cambio del día) */
+export function formatPesos(value: number): string {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    maximumFractionDigits: 0,
+  }).format(value ?? 0);
+}
+
+/**
+ * "Reloj" de la unidad: días desde que se dio de alta (fechaInicio) hasta
+ * que se entregó (fechaEntrega), o hasta hoy si todavía sigue en proceso.
+ */
+export function diasEnProceso(
+  fechaInicio: Date | string | null | undefined,
+  fechaEntrega: Date | string | null | undefined
+): number | null {
+  if (!fechaInicio) return null;
+  const inicio = typeof fechaInicio === "string" ? new Date(fechaInicio) : fechaInicio;
+  const fin = fechaEntrega
+    ? typeof fechaEntrega === "string"
+      ? new Date(fechaEntrega)
+      : fechaEntrega
+    : new Date();
+  const ms = fin.getTime() - inicio.getTime();
+  return Math.max(0, Math.round(ms / 86400000));
+}
+
+export function formatHora(date: Date | string | null | undefined): string {
+  if (!date) return "—";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("es-MX", { hour: "2-digit", minute: "2-digit" }).format(d);
+}
+
+export function formatFecha(date: Date | string | null | undefined): string {
+  if (!date) return "—";
+  const d = typeof date === "string" ? new Date(date) : date;
+  return new Intl.DateTimeFormat("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(d);
+}

@@ -1,0 +1,179 @@
+// Esquema de base de datos de MH Logística
+// En desarrollo usa SQLite (archivo local). En producción (Vercel) se cambia
+// el provider a "postgresql" y DATABASE_URL apunta a la base en la nube.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Un embarque / unidad que se está moviendo de EUA hacia el cliente en México.
+model Shipment {
+  id                String   @id @default(cuid())
+  folio             String   @unique
+
+  // Identificación del equipo
+  semana            Int?
+  equipoDescripcion String
+  categoria         String?
+  tipoUnidad        String?  // CAMION | AMARILLO
+  serie             String
+  cliente           String
+  vendedor          String?  // Jaime Zamudio | Raul Favela | Otro
+  fotoUrl           String?  // foto del equipo (data URL, ya comprimida) para identificarlo visualmente
+  tipoVenta         String   @default("Equipo") // Equipo | Servicio Logístico (cliente externo, no es equipo propio de MH)
+
+  // Estatus / etapa actual
+  estatus           String   @default("Pendiente")
+
+  // Ruta
+  origenCiudad      String?
+  aduana            String?
+  destinoCiudad     String?
+
+  // Proveedores
+  proveedorCompra   String?
+  provFleteUSA      String?
+  provAgenteAduanal String?
+
+  // Costos (MXN o USD según capture el usuario, se define en la UI)
+  costoFleteUSA     Float    @default(0)
+  costoImportacion  Float    @default(0)
+  costoManiobras    Float    @default(0)
+  costoFleteMx      Float    @default(0)
+  costoPermiso      Float    @default(0)
+  fleteMexAplica    Boolean  @default(true)
+
+  // Precio cobrado al cliente por cada servicio logístico (solo aplica
+  // cuando tipoVenta = "Servicio Logístico"; la diferencia contra el costo
+  // real de arriba es la utilidad de ese servicio).
+  precioFleteUSA     Float   @default(0)
+  precioImportacion  Float   @default(0)
+  precioFleteMx      Float   @default(0)
+  precioPermiso      Float   @default(0)
+
+  // Fechas clave del ciclo
+  fechaInicio            DateTime? // cuándo se dio de alta / inició el proceso (arranca el "reloj")
+  fechaCompra            DateTime?
+  fechaSalidaUSA         DateTime?
+  fechaCruce             DateTime?
+  fechaSalidaProgramada  DateTime? // dispara el recordatorio "hoy sale"
+  fechaEntrega           DateTime?
+  tiempoCicloDias        Int?
+  mesVenta               String?
+
+  documentos        String?
+  incidencias       String?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  statusEvents  StatusEvent[]
+  comments      Comment[]
+  paymentOrders PaymentOrder[]
+  sales         Sale[]
+
+  @@index([estatus])
+  @@index([fechaSalidaProgramada])
+}
+
+// Bitácora de cambios de estatus (para el reporte diario/semanal/mensual)
+model StatusEvent {
+  id              String   @id @default(cuid())
+  shipmentId      String
+  shipment        Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  estatusAnterior String?
+  estatusNuevo    String
+  fecha           DateTime @default(now())
+  usuario         String?
+  comentario      String?
+
+  @@index([shipmentId])
+  @@index([fecha])
+}
+
+// Orden de pago generada para requisición con administración
+model PaymentOrder {
+  id                String   @id @default(cuid())
+  folio             String   @unique
+  shipmentId        String
+  shipment          Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  fechaGenerada     DateTime @default(now())
+  generadaPor       String?
+  costoFleteUSA     Float
+  costoImportacion  Float
+  costoManiobras    Float
+  costoFleteMx      Float
+  costoPermiso      Float
+  total             Float
+  tipoCambio        Float? // pesos por dólar del día, para ver el total también en MXN
+  concepto          String? // qué se está pagando: "Flete USA", "Varios conceptos", etc.
+  estatusPago       String   @default("Pendiente") // Pendiente | Pagado | Cancelada
+  notas             String?
+
+  // Datos bancarios para hacer el pago (se capturan al generar la orden)
+  banco             String?
+  direccionBanco    String?
+  numeroCuenta      String?
+  clabe             String?
+  titular           String?
+  direccionTitular  String?
+
+  @@index([shipmentId])
+}
+
+// Ventas / ciclo de venta. Puede o no estar ligada a un embarque específico
+// (los registros históricos importados del PDF no tienen ese vínculo confirmado).
+model Sale {
+  id              String    @id @default(cuid())
+  shipmentId      String?
+  shipment        Shipment? @relation(fields: [shipmentId], references: [id])
+  vendedor        String
+  comprador       String?
+  tipoUnidad      String?   // CAMION | AMARILLO
+  tiempoCicloDias Int?
+  fecha           DateTime?
+  mes             String?
+  anio            Int?
+  fleteMex        Boolean   @default(true)
+  origenDato      String    @default("app") // app | historico-pdf
+  createdAt       DateTime  @default(now())
+
+  @@index([mes])
+  @@index([vendedor])
+}
+
+// Historial de costos por proveedor (tabla del PDF sin vínculo confirmado a
+// un embarque específico). Sirve para analítica de proveedores y rendimientos.
+model CostoHistorico {
+  id                String   @id @default(cuid())
+  proveedorCompra   String?
+  provFleteUSA      String?
+  provAgenteAduanal String?
+  costoFleteUSA     Float    @default(0)
+  costoImportacion  Float    @default(0)
+  costoFleteMx      Float    @default(0)
+  createdAt         DateTime @default(now())
+}
+
+// Comentarios y recordatorios (ej. recordatorio de salida del día)
+model Comment {
+  id                String    @id @default(cuid())
+  shipmentId        String?
+  shipment          Shipment? @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  fecha             DateTime  @default(now())
+  fechaRecordatorio DateTime?
+  texto             String
+  tipo              String    @default("comentario") // comentario | recordatorio
+  autor             String?
+  resuelto          Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+
+  @@index([shipmentId])
+  @@index([fechaRecordatorio])
+}

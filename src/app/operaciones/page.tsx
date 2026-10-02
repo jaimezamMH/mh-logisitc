@@ -1,0 +1,118 @@
+import Link from "next/link";
+import TopBar from "@/components/TopBar";
+import { Card, EmptyState, StatusBadge, SerieTag, ClockBadge } from "@/components/ui";
+import { getShipmentsBoard } from "@/lib/queries";
+import { ESTATUS_FLOW, formatFecha } from "@/lib/constants";
+
+export const dynamic = "force-dynamic";
+
+export default async function OperacionesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ estatus?: string }>;
+}) {
+  const { estatus: filtro } = await searchParams;
+  const shipments = await getShipmentsBoard();
+
+  const columnas = filtro
+    ? ESTATUS_FLOW.filter((e) => e.key === filtro)
+    : ESTATUS_FLOW.filter((e) => e.key !== "Cancelado");
+
+  return (
+    <>
+      <TopBar title="Operaciones" subtitle="Tablero de estatus en tiempo real" />
+      <main className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-8">
+        {filtro && (
+          <Link href="/operaciones" className="inline-block mb-4 text-sm text-brand-blue-700 hover:underline">
+            ← Ver todas las etapas
+          </Link>
+        )}
+        <div className="flex gap-4 h-full min-h-[70vh]">
+          {columnas.map((col) => {
+            const items = shipments
+              .filter((s) => s.estatus === col.key)
+              .sort((a, b) => {
+                // En "Entregado" se acomodan por fecha de entrega, la más
+                // reciente arriba. Las demás columnas mantienen su orden.
+                if (col.key === "Entregado") {
+                  return (b.fechaEntrega?.getTime() ?? 0) - (a.fechaEntrega?.getTime() ?? 0);
+                }
+                return 0;
+              });
+            return (
+              <div key={col.key} className="w-72 shrink-0 flex flex-col">
+                <div className={`rounded-t-xl px-4 py-3 ${col.bg}`}>
+                  <p className={`text-sm font-semibold ${col.text}`}>{col.label}</p>
+                  <p className={`text-xs ${col.text} opacity-80`}>{items.length} unidad(es)</p>
+                </div>
+                <Card className="flex-1 rounded-t-none border-t-0 overflow-y-auto p-2 space-y-2">
+                  {items.length === 0 ? (
+                    <EmptyState text="Sin unidades" />
+                  ) : (
+                    items.map((s) => (
+                      <Link
+                        key={s.id}
+                        href={`/embarques/${s.id}`}
+                        className="flex gap-2.5 rounded-lg border border-border p-3 hover:border-brand-blue-500 hover:shadow-sm transition-all"
+                      >
+                        {s.fotoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={s.fotoUrl} alt="" className="w-12 h-12 rounded-md object-cover shrink-0 border border-border" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-md bg-gray-100 shrink-0" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-ink-primary line-clamp-2">{s.equipoDescripcion}</p>
+                        <p className="text-xs text-ink-muted mt-1">{s.cliente}</p>
+                        <div className="flex items-center justify-between mt-1.5">
+                          <SerieTag serie={s.serie} />
+                          <ClockBadge fechaInicio={s.fechaInicio} fechaEntrega={s.fechaEntrega} tiempoCicloDias={s.tiempoCicloDias} />
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-[11px] text-ink-muted">{s.folio}</span>
+                          {col.key === "Entregado" ? (
+                            s.fechaEntrega && (
+                              <span className="text-[11px] font-medium text-brand-navy">
+                                Entregado {formatFecha(s.fechaEntrega)}
+                              </span>
+                            )
+                          ) : (
+                            s.fechaSalidaProgramada && (
+                              <span className="text-[11px] text-brand-orange-700">
+                                Sale {formatFecha(s.fechaSalidaProgramada)}
+                              </span>
+                            )
+                          )}
+                        </div>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </Card>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* vista en lista, útil en celular */}
+        <div className="md:hidden mt-8">
+          <p className="text-xs uppercase text-ink-muted mb-2">Lista completa</p>
+          <Card className="divide-y divide-border">
+            {shipments.map((s) => (
+              <Link key={s.id} href={`/embarques/${s.id}`} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{s.equipoDescripcion}</p>
+                  <p className="text-xs text-ink-muted truncate flex items-center gap-2">
+                    <span>{s.cliente}</span>
+                    <SerieTag serie={s.serie} />
+                  </p>
+                </div>
+                <StatusBadge estatus={s.estatus} />
+              </Link>
+            ))}
+          </Card>
+        </div>
+      </main>
+    </>
+  );
+}

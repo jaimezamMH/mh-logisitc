@@ -1,0 +1,501 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import TopBar from "@/components/TopBar";
+import { Card, CardHeader, StatusBadge, EmptyState, SerieTag, ClockBadge, MoneyInput } from "@/components/ui";
+import UserSelect from "@/components/UserSelect";
+import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
+import FotoEquipo from "@/components/FotoEquipo";
+import { getShipment } from "@/lib/queries";
+import {
+  updateShipmentEstatusForm,
+  updateShipmentInfo,
+  updateShipmentCosts,
+  generarOrdenDePago,
+  cancelarOrdenDePago,
+  eliminarOrdenDePago,
+  createComment,
+  resolveComment,
+  deleteShipment,
+} from "@/lib/actions";
+import { ADUANAS, ESTATUS_FLOW, TIPOS_UNIDAD, estatusInfo, formatFecha, formatMXN } from "@/lib/constants";
+import { calcularDuracionPorEtapa } from "@/lib/ciclo";
+import { Trash2, Printer } from "lucide-react";
+
+export const dynamic = "force-dynamic";
+
+function dateInputValue(d: Date | null | undefined) {
+  if (!d) return "";
+  return new Date(d).toISOString().slice(0, 10);
+}
+
+export default async function EmbarqueDetallePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const shipment = await getShipment(id);
+  if (!shipment) notFound();
+
+  const totalCostos =
+    shipment.costoFleteUSA + shipment.costoImportacion + shipment.costoManiobras + shipment.costoFleteMx + shipment.costoPermiso;
+
+  const esServicio = shipment.tipoVenta === "Servicio Logístico";
+  const totalPrecioServicio =
+    shipment.precioFleteUSA + shipment.precioImportacion + shipment.precioFleteMx + shipment.precioPermiso;
+  const utilidadServicio = totalPrecioServicio - totalCostos;
+
+  const info = estatusInfo(shipment.estatus);
+
+  // Cuántos días duró cada etapa (se usa en el historial de abajo).
+  const duracionPorEvento = new Map(
+    calcularDuracionPorEtapa(shipment.statusEvents, shipment.fechaEntrega).map((d) => [d.eventoId, d])
+  );
+
+  return (
+    <>
+      <TopBar title={shipment.folio} subtitle={shipment.equipoDescripcion} />
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+        <Card className="p-4 md:p-5">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="w-full md:w-64 shrink-0">
+              <FotoEquipo shipmentId={shipment.id} fotoUrl={shipment.fotoUrl} />
+            </div>
+            <div className="flex-1 flex flex-col justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-xl font-semibold text-ink-primary">{shipment.equipoDescripcion}</h2>
+                    {esServicio && (
+                      <span className="rounded-full bg-brand-blue-100 text-brand-blue-900 text-xs font-medium px-2.5 py-1">
+                        Servicio Logístico
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-ink-muted flex items-center gap-2 flex-wrap mt-1">
+                    <span>{shipment.cliente} {shipment.semana ? `· Semana ${shipment.semana}` : ""}</span>
+                    <SerieTag serie={shipment.serie} />
+                    <ClockBadge
+                      fechaInicio={shipment.fechaInicio}
+                      fechaEntrega={shipment.fechaEntrega}
+                      tiempoCicloDias={shipment.tiempoCicloDias}
+                    />
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <StatusBadge estatus={shipment.estatus} />
+                  <form action={deleteShipment.bind(null, shipment.id)}>
+                    <ConfirmSubmitButton
+                      confirmText={`¿Eliminar la unidad "${shipment.equipoDescripcion}" (serie ${shipment.serie})? Esto no se puede deshacer.`}
+                      className="flex items-center gap-1.5 text-xs text-ink-muted hover:text-brand-orange-700 border border-border rounded-lg px-3 py-1.5"
+                      title="Eliminar unidad"
+                    >
+                      <Trash2 size={14} />
+                      Eliminar
+                    </ConfirmSubmitButton>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Cambiar estatus */}
+        <Card>
+          <CardHeader title="Mover a la siguiente etapa" subtitle={info.descripcion} />
+          <form action={updateShipmentEstatusForm.bind(null, shipment.id)} className="p-5 space-y-4">
+            <div className="flex flex-wrap gap-2">
+              {ESTATUS_FLOW.map((e) => (
+                <button
+                  key={e.key}
+                  type="submit"
+                  name="estatus"
+                  value={e.key}
+                  className={`rounded-lg px-3 py-2 text-xs font-medium border transition-colors ${
+                    e.key === shipment.estatus
+                      ? `${e.bg} ${e.text} border-transparent`
+                      : "border-border text-ink-secondary hover:bg-surface-muted"
+                  }`}
+                >
+                  {e.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <UserSelect name="usuario" label="Registrado por" />
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Comentario del cambio (opcional)</span>
+                <input name="comentario" className="rounded-lg border border-border px-3 py-2 text-sm" placeholder="Ej. Cruzó en Calexico" />
+              </label>
+            </div>
+          </form>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Información del embarque */}
+          <Card>
+            <CardHeader title="Información y ruta" />
+            <form action={updateShipmentInfo.bind(null, shipment.id)} className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+                <span className="text-ink-secondary">Descripción</span>
+                <input name="equipoDescripcion" defaultValue={shipment.equipoDescripcion} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Cliente</span>
+                <input name="cliente" defaultValue={shipment.cliente} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Serie</span>
+                <input name="serie" defaultValue={shipment.serie} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Categoría</span>
+                <input name="categoria" defaultValue={shipment.categoria ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Tipo de unidad</span>
+                <select name="tipoUnidad" defaultValue={shipment.tipoUnidad ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm">
+                  <option value="">Selecciona…</option>
+                  {TIPOS_UNIDAD.map((t) => (
+                    <option key={t} value={t}>
+                      {t === "CAMION" ? "Camión" : "Amarilla (maquinaria)"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Vendedor</span>
+                <input name="vendedor" defaultValue={shipment.vendedor ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Origen</span>
+                <input name="origenCiudad" defaultValue={shipment.origenCiudad ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Aduana</span>
+                <select name="aduana" defaultValue={shipment.aduana ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm">
+                  <option value="">Selecciona…</option>
+                  {ADUANAS.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Destino</span>
+                <input name="destinoCiudad" defaultValue={shipment.destinoCiudad ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Fecha de inicio (arranca el reloj)</span>
+                <input type="date" name="fechaInicio" defaultValue={dateInputValue(shipment.fechaInicio)} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Salida programada</span>
+                <input type="date" name="fechaSalidaProgramada" defaultValue={dateInputValue(shipment.fechaSalidaProgramada)} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Fecha de cruce</span>
+                <input type="date" name="fechaCruce" defaultValue={dateInputValue(shipment.fechaCruce)} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Proveedor de compra</span>
+                <input name="proveedorCompra" defaultValue={shipment.proveedorCompra ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Proveedor flete USA</span>
+                <input name="provFleteUSA" defaultValue={shipment.provFleteUSA ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Agente aduanal</span>
+                <input name="provAgenteAduanal" defaultValue={shipment.provAgenteAduanal ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+                <span className="text-ink-secondary">Incidencias / notas</span>
+                <textarea name="incidencias" defaultValue={shipment.incidencias ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm min-h-16" />
+              </label>
+              <div className="sm:col-span-2 flex justify-end">
+                <button className="rounded-lg bg-gray-900 text-white text-sm font-medium px-4 py-2 hover:opacity-90">
+                  Guardar cambios
+                </button>
+              </div>
+            </form>
+          </Card>
+
+          {/* Costos y orden de pago */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader
+                title="Costos del embarque"
+                subtitle={
+                  esServicio
+                    ? "Costo real (lo que pagas) vs. precio al cliente (lo que cobras) — la diferencia es tu utilidad"
+                    : "Alimenta aquí flete USA, importación, maniobras, flete Mx y permiso"
+                }
+              />
+              <form action={updateShipmentCosts.bind(null, shipment.id)} className="p-5 space-y-4">
+                {esServicio ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 text-xs font-medium text-ink-muted px-1">
+                      <span>Concepto</span>
+                      <span className="w-24 text-right">Costo real</span>
+                      <span className="w-24 text-right">Precio cliente</span>
+                      <span className="w-20 text-right">Utilidad</span>
+                    </div>
+                    {[
+                      { campo: "costoFleteUSA", precioCampo: "precioFleteUSA", label: "Flete USA", costo: shipment.costoFleteUSA, precio: shipment.precioFleteUSA },
+                      { campo: "costoImportacion", precioCampo: "precioImportacion", label: "Importación", costo: shipment.costoImportacion, precio: shipment.precioImportacion },
+                      { campo: "costoFleteMx", precioCampo: "precioFleteMx", label: "Flete México", costo: shipment.costoFleteMx, precio: shipment.precioFleteMx },
+                      { campo: "costoPermiso", precioCampo: "precioPermiso", label: "Permiso/Seguro", costo: shipment.costoPermiso, precio: shipment.precioPermiso },
+                    ].map((c) => (
+                      <div key={c.campo} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center">
+                        <span className="text-sm text-ink-secondary">{c.label}</span>
+                        <MoneyInput name={c.campo} defaultValue={c.costo} className="w-24 rounded-md border border-border px-2 py-1.5 text-right text-sm" />
+                        <MoneyInput name={c.precioCampo} defaultValue={c.precio} className="w-24 rounded-md border border-brand-blue-200 bg-brand-blue-50 px-2 py-1.5 text-right text-sm" />
+                        <span className={`w-20 text-right text-sm font-medium ${c.precio - c.costo >= 0 ? "text-brand-blue-700" : "text-red-600"}`}>
+                          {formatMXN(c.precio - c.costo)}
+                        </span>
+                      </div>
+                    ))}
+                    <input type="hidden" name="costoManiobras" value={shipment.costoManiobras} />
+                    <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center pt-2 border-t border-border">
+                      <span className="text-sm font-semibold text-ink-primary">Total</span>
+                      <span className="w-24 text-right text-sm font-semibold text-ink-primary">{formatMXN(totalCostos)}</span>
+                      <span className="w-24 text-right text-sm font-semibold text-ink-primary">{formatMXN(totalPrecioServicio)}</span>
+                      <span className={`w-20 text-right text-sm font-bold ${utilidadServicio >= 0 ? "text-brand-blue-700" : "text-red-600"}`}>
+                        {formatMXN(utilidadServicio)}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span className="text-ink-secondary">Flete USA</span>
+                      <MoneyInput name="costoFleteUSA" defaultValue={shipment.costoFleteUSA} />
+                    </label>
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span className="text-ink-secondary">Importación</span>
+                      <MoneyInput name="costoImportacion" defaultValue={shipment.costoImportacion} />
+                    </label>
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span className="text-ink-secondary">Maniobra/Reparación</span>
+                      <MoneyInput name="costoManiobras" defaultValue={shipment.costoManiobras} />
+                    </label>
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span className="text-ink-secondary">Flete México</span>
+                      <MoneyInput name="costoFleteMx" defaultValue={shipment.costoFleteMx} />
+                    </label>
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span className="text-ink-secondary">Permiso/Seguro</span>
+                      <MoneyInput name="costoPermiso" defaultValue={shipment.costoPermiso} />
+                    </label>
+                    <label className="flex items-center gap-2 text-sm mt-5">
+                      <input type="checkbox" name="fleteMexAplica" defaultChecked={shipment.fleteMexAplica} />
+                      <span className="text-ink-secondary">Aplica flete Mx</span>
+                    </label>
+                    <div className="col-span-2 flex items-center justify-between pt-2 border-t border-border">
+                      <span className="text-sm text-ink-secondary">Total</span>
+                      <span className="text-lg font-semibold text-ink-primary">{formatMXN(totalCostos)}</span>
+                    </div>
+                  </div>
+                )}
+                <div className="flex justify-end">
+                  <button className="rounded-lg bg-gray-900 text-white text-sm font-medium px-4 py-2 hover:opacity-90">
+                    Guardar costos
+                  </button>
+                </div>
+              </form>
+            </Card>
+
+            <Card>
+              <CardHeader
+                title="Orden de pago"
+                subtitle="Puedes escribir/ajustar el monto aquí mismo: se guarda en el equipo al generar la orden"
+              />
+              <div className="p-5 space-y-4">
+                <form action={generarOrdenDePago.bind(null, shipment.id)} className="space-y-3">
+                  <div className="space-y-1.5">
+                    {[
+                      { check: "incluirFleteUSA", campo: "costoFleteUSA", label: "Flete USA", monto: shipment.costoFleteUSA },
+                      { check: "incluirImportacion", campo: "costoImportacion", label: "Importación / Aduana", monto: shipment.costoImportacion },
+                      { check: "incluirManiobras", campo: "costoManiobras", label: "Maniobra/Reparación", monto: shipment.costoManiobras },
+                      { check: "incluirFleteMx", campo: "costoFleteMx", label: "Flete México", monto: shipment.costoFleteMx },
+                      { check: "incluirPermiso", campo: "costoPermiso", label: "Permiso/Seguro", monto: shipment.costoPermiso },
+                    ].map((c) => (
+                      <label key={c.check} className="flex items-center justify-between gap-2 text-sm rounded-lg border border-border px-3 py-2">
+                        <span className="flex items-center gap-2 text-ink-secondary shrink-0">
+                          <input type="checkbox" name={c.check} defaultChecked />
+                          {c.label}
+                        </span>
+                        <MoneyInput name={c.campo} defaultValue={c.monto} className="w-28 rounded-md border border-border px-2 py-1 text-right text-sm" />
+                      </label>
+                    ))}
+                  </div>
+                  <UserSelect name="generadaPor" label="Solicitada por" />
+
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-ink-secondary">Tipo de cambio del día (pesos por dólar)</span>
+                    <MoneyInput name="tipoCambio" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                    <span className="text-xs text-ink-muted">
+                      Opcional — si lo llenas, la orden muestra el total también en pesos, para proveedores mexicanos.
+                    </span>
+                  </label>
+
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs font-medium text-ink-muted uppercase tracking-wide mb-2">
+                      Datos bancarios para el pago
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-ink-secondary">Banco</span>
+                        <input name="banco" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-ink-secondary">Dirección del banco</span>
+                        <input name="direccionBanco" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-ink-secondary">Número de cuenta</span>
+                        <input name="numeroCuenta" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-ink-secondary">CLABE interbancaria</span>
+                        <input name="clabe" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-ink-secondary">Nombre del titular</span>
+                        <input name="titular" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-ink-secondary">Dirección del titular</span>
+                        <input name="direccionTitular" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                      </label>
+                    </div>
+                  </div>
+
+                  <input name="notas" placeholder="Notas para administración (opcional)" className="w-full rounded-lg border border-border px-3 py-2 text-sm" />
+                  <button className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand-orange-500 hover:bg-brand-orange-600 text-white text-sm font-medium py-2.5">
+                    <Printer size={16} />
+                    Generar e imprimir orden de pago
+                  </button>
+                </form>
+
+                {shipment.paymentOrders.length > 0 && (
+                  <ul className="divide-y divide-border border-t border-border pt-2">
+                    {shipment.paymentOrders.map((o) => (
+                      <li key={o.id} className="flex items-center justify-between py-2 text-sm gap-2">
+                        <div className="min-w-0">
+                          <Link href={`/orden-pago/${o.id}`} className="text-brand-blue-700 hover:underline block truncate">
+                            {o.folio} · {formatMXN(o.total)}
+                          </Link>
+                          <p className="text-xs text-ink-muted truncate">{o.concepto ?? "Todos los conceptos"}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span
+                            className={
+                              o.estatusPago === "Pagado"
+                                ? "text-brand-blue-700"
+                                : o.estatusPago === "Cancelada"
+                                  ? "text-gray-400"
+                                  : "text-brand-orange-700"
+                            }
+                          >
+                            {o.estatusPago}
+                          </span>
+                          {o.estatusPago === "Pendiente" && (
+                            <form action={cancelarOrdenDePago.bind(null, o.id)}>
+                              <button className="text-xs text-gray-400 hover:text-red-600" title="Cancelar orden">
+                                Cancelar
+                              </button>
+                            </form>
+                          )}
+                          <form action={eliminarOrdenDePago.bind(null, o.id)}>
+                            <ConfirmSubmitButton
+                              confirmText={`¿Eliminar la orden ${o.folio}? Esto no se puede deshacer.`}
+                              className="text-xs text-gray-400 hover:text-red-600"
+                              title="Eliminar orden"
+                            >
+                              Eliminar
+                            </ConfirmSubmitButton>
+                          </form>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Comentarios */}
+          <Card>
+            <CardHeader title="Comentarios" />
+            <form action={createComment} className="p-5 space-y-3 border-b border-border">
+              <input type="hidden" name="shipmentId" value={shipment.id} />
+              <textarea name="texto" required placeholder="Escribe un comentario…" className="w-full rounded-lg border border-border px-3 py-2 text-sm min-h-16" />
+              <div className="flex gap-3">
+                <input name="autor" placeholder="Tu nombre" className="flex-1 rounded-lg border border-border px-3 py-2 text-sm" />
+                <button className="rounded-lg bg-gray-900 text-white text-sm font-medium px-4 py-2">Agregar</button>
+              </div>
+            </form>
+            {shipment.comments.length === 0 ? (
+              <EmptyState text="Sin comentarios todavía." />
+            ) : (
+              <ul className="divide-y divide-border">
+                {shipment.comments.map((c) => (
+                  <li key={c.id} className="px-5 py-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm text-ink-primary">{c.texto}</p>
+                      <p className="text-xs text-ink-muted mt-0.5">
+                        {c.autor ?? "Sin autor"} · {formatFecha(c.createdAt)} {c.tipo === "recordatorio" && "· Recordatorio"}
+                      </p>
+                    </div>
+                    {!c.resuelto && c.tipo === "recordatorio" && (
+                      <form action={resolveComment.bind(null, c.id)}>
+                        <button className="text-xs text-brand-blue-700 hover:underline shrink-0">Resolver</button>
+                      </form>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          {/* Historial de estatus */}
+          <Card>
+            <CardHeader title="Historial de estatus" />
+            {shipment.statusEvents.length === 0 ? (
+              <EmptyState text="Sin movimientos registrados." />
+            ) : (
+              <ul className="divide-y divide-border">
+                {shipment.statusEvents.map((e) => {
+                  const dur = duracionPorEvento.get(e.id);
+                  return (
+                    <li key={e.id} className="px-5 py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm text-ink-primary">
+                          {e.estatusAnterior ? `${e.estatusAnterior} → ` : ""}
+                          <span className="font-medium">{e.estatusNuevo}</span>
+                        </p>
+                        {dur && (
+                          <span
+                            className={`inline-flex items-center gap-1 text-xs font-medium shrink-0 ${
+                              dur.enCurso ? "text-brand-orange-700" : "text-ink-secondary"
+                            }`}
+                          >
+                            ⏱ {dur.dias} día{dur.dias === 1 ? "" : "s"} {dur.enCurso ? "(en curso)" : "en esta etapa"}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-ink-muted mt-0.5">
+                        {e.usuario ?? "Sistema"} · {formatFecha(e.fecha)} {e.comentario ? `· ${e.comentario}` : ""}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+        </div>
+      </main>
+    </>
+  );
+}

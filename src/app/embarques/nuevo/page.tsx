@@ -1,0 +1,134 @@
+import TopBar from "@/components/TopBar";
+import { Card, CardHeader } from "@/components/ui";
+import UserSelect from "@/components/UserSelect";
+import { createShipment } from "@/lib/actions";
+import { ADUANAS, ESTATUS_FLOW, TIPOS_UNIDAD } from "@/lib/constants";
+
+export default function NuevoEmbarquePage() {
+  return (
+    <>
+      <TopBar title="Nueva unidad" subtitle="Da de alta un equipo para darle seguimiento" />
+      <main className="flex-1 overflow-y-auto p-4 md:p-8">
+        <Card className="max-w-3xl mx-auto">
+          <CardHeader title="Datos del equipo" />
+          <form action={createShipment} className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+              <span className="text-ink-secondary">Descripción del equipo</span>
+              <input
+                name="equipoDescripcion"
+                required
+                placeholder="Ej. Grúa Titán 2016 FREIGHTLINER 10 ton"
+                className="rounded-lg border border-border px-3 py-2 text-sm"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Categoría</span>
+              <input
+                name="categoria"
+                placeholder="Ej. Grúa Articulada"
+                className="rounded-lg border border-border px-3 py-2 text-sm"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Tipo de unidad</span>
+              <select name="tipoUnidad" className="rounded-lg border border-border px-3 py-2 text-sm">
+                <option value="">Selecciona…</option>
+                {TIPOS_UNIDAD.map((t) => (
+                  <option key={t} value={t}>
+                    {t === "CAMION" ? "Camión" : "Amarilla (maquinaria)"}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Serie</span>
+              <input name="serie" required className="rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Cliente</span>
+              <input name="cliente" required className="rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+
+            <UserSelect name="vendedor" label="Vendedor" />
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Estatus inicial</span>
+              <select name="estatus" defaultValue="Pendiente" className="rounded-lg border border-border px-3 py-2 text-sm">
+                {ESTATUS_FLOW.filter((e) => e.key !== "Cancelado").map((e) => (
+                  <option key={e.key} value={e.key}>
+                    {e.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Origen (ciudad, estado)</span>
+              <input name="origenCiudad" placeholder="Ej. Phoenix, AZ" className="rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Aduana</span>
+              <select name="aduana" className="rounded-lg border border-border px-3 py-2 text-sm">
+                <option value="">Selecciona…</option>
+                {ADUANAS.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Destino (ciudad del cliente)</span>
+              <input name="destinoCiudad" className="rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Fecha de inicio (arranca el reloj)</span>
+              <input
+                type="date"
+                name="fechaInicio"
+                defaultValue={new Date().toISOString().slice(0, 10)}
+                className="rounded-lg border border-border px-3 py-2 text-sm"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Fecha de salida programada</span>
+              <input type="date" name="fechaSalidaProgramada" className="rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Proveedor de compra</span>
+              <input name="proveedorCompra" className="rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Proveedor flete USA</span>
+              <input name="provFleteUSA" className="rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Agente aduanal</span>
+              <input name="provAgenteAduanal" className="rounded-lg border border-border px-3 py-2 text-sm" />
+            </label>
+
+            <div className="sm:col-span-2 flex justify-end gap-3 pt-2">
+              <button
+                type="submit"
+                className="rounded-lg bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-sm font-medium px-5 py-2.5"
+              >
+                Guardar unidad
+              </button>
+            </div>
+          </form>
+        </Card>
+      </main>
+    </>
+  );
+}
