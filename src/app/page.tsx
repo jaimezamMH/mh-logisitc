@@ -149,41 +149,84 @@ export default async function DashboardPage() {
           </Card>
         )}
 
-        {/* Semáforo: unidades en Agencia (en reparación, a punto de entregar) */}
-        {data.enAgencia.length > 0 && (
-          <Card className="border-2 border-red-500/60">
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
-              <span className="relative flex h-3.5 w-3.5 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
-                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-600" />
-              </span>
-              <div>
-                <p className="font-semibold text-red-700 text-sm">En Agencia — en reparación</p>
-                <p className="text-xs text-ink-muted">
-                  Ya casi se entregan, pero están detenidas en reparación. {data.enAgencia.length} unidad
-                  {data.enAgencia.length === 1 ? "" : "es"}.
-                </p>
-              </div>
-            </div>
-            <ul className="divide-y divide-border">
-              {data.enAgencia.map((s) => (
-                <li key={s.id}>
-                  <Link
-                    href={`/embarques/${s.id}`}
-                    className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-red-50/60 transition-colors"
-                  >
-                    <div className="min-w-0 flex items-center gap-2 flex-wrap">
-                      <Wrench size={14} className="text-red-600 shrink-0" />
-                      <span className="text-sm font-medium text-ink-primary truncate">{s.equipoDescripcion}</span>
-                      <span className="text-xs text-ink-muted">{s.cliente}</span>
-                      <SerieTag serie={s.serie} />
-                    </div>
-                    <ClockBadge fechaInicio={s.fechaInicio} fechaEntrega={s.fechaEntrega} tiempoCicloDias={s.tiempoCicloDias} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </Card>
+        {/* Semáforos: Agencia (rojo, en reparación) y Flete México (verde, en camino a destino) */}
+        {(data.enAgencia.length > 0 || data.enFleteMexico.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {data.enAgencia.length > 0 && (
+              <Card className="border-2 border-red-500/60">
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
+                  <span className="relative flex h-3.5 w-3.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-600" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-red-700 text-sm">En Agencia — en reparación</p>
+                    <p className="text-xs text-ink-muted">
+                      Ya casi se entregan, pero están detenidas en reparación. {data.enAgencia.length} unidad
+                      {data.enAgencia.length === 1 ? "" : "es"}.
+                    </p>
+                  </div>
+                </div>
+                <ul className="divide-y divide-border">
+                  {data.enAgencia.map((s) => (
+                    <li key={s.id}>
+                      <Link
+                        href={`/embarques/${s.id}`}
+                        className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-red-50/60 transition-colors"
+                      >
+                        <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                          <Wrench size={14} className="text-red-600 shrink-0" />
+                          <span className="text-sm font-medium text-ink-primary truncate">{s.equipoDescripcion}</span>
+                          <span className="text-xs text-ink-muted">{s.cliente}</span>
+                          <SerieTag serie={s.serie} />
+                        </div>
+                        <ClockBadge fechaInicio={s.fechaInicio} fechaEntrega={s.fechaEntrega} tiempoCicloDias={s.tiempoCicloDias} />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+
+            {data.enFleteMexico.length > 0 && (
+              <Card className="border-2 border-green-500/60">
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
+                  <span className="relative flex h-3.5 w-3.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-green-600" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-green-700 text-sm">Flete México — en camino</p>
+                    <p className="text-xs text-ink-muted">
+                      Ya cruzaron, van rumbo a destino dentro de México. {data.enFleteMexico.length} unidad
+                      {data.enFleteMexico.length === 1 ? "" : "es"}.
+                    </p>
+                  </div>
+                </div>
+                <ul className="divide-y divide-border">
+                  {data.enFleteMexico.map((s) => (
+                    <li key={s.id}>
+                      <Link
+                        href={`/embarques/${s.id}`}
+                        className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-green-50/60 transition-colors"
+                      >
+                        <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                          <Ship size={14} className="text-green-600 shrink-0" />
+                          <span className="text-sm font-medium text-ink-primary truncate">{s.equipoDescripcion}</span>
+                          <span className="text-xs text-ink-muted">{s.cliente}</span>
+                          <SerieTag serie={s.serie} />
+                          {s.destinoCiudad && (
+                            <span className="text-xs text-ink-muted">→ {s.destinoCiudad}</span>
+                          )}
+                        </div>
+                        <ClockBadge fechaInicio={s.fechaInicio} fechaEntrega={s.fechaEntrega} tiempoCicloDias={s.tiempoCicloDias} />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+          </div>
         )}
 
         {/* KPIs */}

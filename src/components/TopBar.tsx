@@ -2,8 +2,17 @@ import Link from "next/link";
 import { Plus, LogOut } from "lucide-react";
 import { TopBarUserBadge } from "@/components/UserSelect";
 import { logoutAction } from "@/lib/auth-actions";
+import BackButton from "@/components/BackButton";
 
-export default function TopBar({ title, subtitle }: { title: string; subtitle?: string }) {
+export default function TopBar({
+  title,
+  subtitle,
+  showBack,
+}: {
+  title: string;
+  subtitle?: string;
+  showBack?: boolean;
+}) {
   const hoy = new Intl.DateTimeFormat("es-MX", {
     weekday: "long",
     day: "2-digit",
@@ -13,9 +22,12 @@ export default function TopBar({ title, subtitle }: { title: string; subtitle?: 
 
   return (
     <header className="no-print sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-border bg-surface/95 backdrop-blur px-4 md:px-8 h-16 shrink-0">
-      <div>
-        <h1 className="text-lg font-semibold text-ink-primary leading-tight">{title}</h1>
-        <p className="text-xs text-ink-muted capitalize">{subtitle ?? hoy}</p>
+      <div className="flex items-center gap-2 min-w-0">
+        {showBack && <BackButton />}
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold text-ink-primary leading-tight truncate">{title}</h1>
+          <p className="text-xs text-ink-muted capitalize truncate">{subtitle ?? hoy}</p>
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <TopBarUserBadge />

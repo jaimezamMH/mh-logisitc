@@ -15,6 +15,15 @@ async function nextFolio() {
   return `MH-2026-${String(n + 1).padStart(4, "0")}`;
 }
 
+async function nextCotizacionFolio() {
+  const last = await prisma.cotizacion.findFirst({
+    orderBy: { folio: "desc" },
+    select: { folio: true },
+  });
+  const n = last ? parseInt(last.folio.split("-").pop() ?? "0", 10) || 0 : 0;
+  return `COT-2026-${String(n + 1).padStart(4, "0")}`;
+}
+
 function str(fd: FormData, key: string): string | undefined {
   const v = fd.get(key);
   if (typeof v !== "string") return undefined;
@@ -226,11 +235,17 @@ export async function quitarFotoEquipo(shipmentId: string): Promise<void> {
 
 export async function updateShipmentCosts(shipmentId: string, formData: FormData): Promise<void> {
   const tienePrecios = formData.has("precioFleteUSA");
+  // Si la unidad ya tiene Flete USA desglosado en gastos individuales
+  // (viáticos, vuelos, comisión...), ese costo se administra SOLO desde ahí
+  // (agregarGastoFleteUSA/eliminarGastoFleteUSA) — aquí se ignora para no
+  // pisarlo con un monto suelto desde otra pantalla (ej. la tabla editable
+  // de /costos).
+  const tieneGastosFleteUSA = (await prisma.gastoFleteUSA.count({ where: { shipmentId } })) > 0;
 
   await prisma.shipment.update({
     where: { id: shipmentId },
     data: {
-      costoFleteUSA: num(formData, "costoFleteUSA"),
+      ...(tieneGastosFleteUSA ? {} : { costoFleteUSA: num(formData, "costoFleteUSA") }),
       costoImportacion: num(formData, "costoImportacion"),
       costoManiobras: num(formData, "costoManiobras"),
       costoFleteMx: num(formData, "costoFleteMx"),
@@ -279,24 +294,41 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
   const generadaPor = str(formData, "generadaPor") ?? "Sin especificar";
   const notas = str(formData, "notas");
 
-  const s = await prisma.shipment.findUnique({ where: { id: shipmentId } });
+  const s = await prisma.shipment.findUnique({
+    where: { id: shipmentId },
+    include: { gastosFleteUSA: { where: { paymentOrderId: null }, orderBy: { fecha: "asc" } } },
+  });
   if (!s) throw new Error("Embarque no encontrado");
 
-  // Por concepto: solo se incluyen (y se cobran) los conceptos marcados.
-  // Si no viene ningún checkbox (formularios viejos), se incluyen todos.
-  const CONCEPTOS = [
-    { campo: "costoFleteUSA", check: "incluirFleteUSA", label: "Flete USA" },
+  // Flete USA no es un solo monto — son varios gastos que se van sumando
+  // (viáticos, vuelos, comisión, etc., ver GastoFleteUSA). Si el equipo ya
+  // tiene gastos capturados así, el monto de la orden es la suma de los que
+  // se marquen aquí uno por uno; si todavía no se ha capturado ningún gasto
+  // (equipos viejos), se comporta como antes: un solo monto editable.
+  const usaGastosFleteUSA = s.gastosFleteUSA.length > 0;
+  const gastosMarcados = usaGastosFleteUSA
+    ? s.gastosFleteUSA.filter((g) => formData.get(`gasto_${g.id}`) === "on")
+    : [];
+
+  let montoFleteUSA: number;
+  if (usaGastosFleteUSA) {
+    montoFleteUSA = gastosMarcados.reduce((a, g) => a + g.monto, 0);
+  } else {
+    const valor = formData.get("costoFleteUSA");
+    montoFleteUSA = typeof valor === "string" && valor.trim() !== "" ? num(formData, "costoFleteUSA") : s.costoFleteUSA;
+  }
+
+  // Los otros 4 conceptos siguen igual que siempre: un solo monto editable
+  // aquí mismo, que se guarda en el equipo aunque el concepto esté desmarcado.
+  const OTROS_CONCEPTOS = [
     { campo: "costoImportacion", check: "incluirImportacion", label: "Importación / Aduana" },
     { campo: "costoManiobras", check: "incluirManiobras", label: "Maniobra/Reparación" },
     { campo: "costoFleteMx", check: "incluirFleteMx", label: "Flete México" },
     { campo: "costoPermiso", check: "incluirPermiso", label: "Permiso/Seguro" },
   ] as const;
 
-  // Los montos que se escriban aquí (aunque el concepto esté desmarcado)
-  // se guardan de una vez en el equipo, para no tener que ir a otra
-  // pantalla a capturarlos primero.
-  const costosActualizados: Record<string, number> = {};
-  for (const c of CONCEPTOS) {
+  const costosActualizados: Record<string, number> = usaGastosFleteUSA ? {} : { costoFleteUSA: montoFleteUSA };
+  for (const c of OTROS_CONCEPTOS) {
     const valor = formData.get(c.campo);
     costosActualizados[c.campo] = typeof valor === "string" && valor.trim() !== ""
       ? num(formData, c.campo)
@@ -307,27 +339,38 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
     data: costosActualizados,
   });
 
-  const algunoMarcado = CONCEPTOS.some((c) => formData.get(c.check) === "on");
-  const incluidos = CONCEPTOS.filter((c) => !algunoMarcado || formData.get(c.check) === "on");
-
+  const incluirFleteUSA = formData.get("incluirFleteUSA") === "on";
   const montos: Record<string, number> = {
-    costoFleteUSA: 0,
+    costoFleteUSA: incluirFleteUSA ? montoFleteUSA : 0,
     costoImportacion: 0,
     costoManiobras: 0,
     costoFleteMx: 0,
     costoPermiso: 0,
   };
-  for (const c of incluidos) montos[c.campo] = shipmentActualizado[c.campo as keyof typeof shipmentActualizado] as number;
+  const etiquetas: string[] = [];
+  if (incluirFleteUSA) etiquetas.push("Flete USA");
+  for (const c of OTROS_CONCEPTOS) {
+    if (formData.get(c.check) === "on") {
+      montos[c.campo] = shipmentActualizado[c.campo as keyof typeof shipmentActualizado] as number;
+      etiquetas.push(c.label);
+    }
+  }
 
-  const concepto = incluidos.length === CONCEPTOS.length
-    ? "Todos los conceptos"
-    : incluidos.length === 1
-      ? incluidos[0].label
-      : incluidos.map((c) => c.label).join(" + ");
+  const concepto =
+    etiquetas.length === 0
+      ? "Sin conceptos"
+      : etiquetas.length === 5
+        ? "Todos los conceptos"
+        : etiquetas.join(" + ");
 
   const total = Object.values(montos).reduce((a, b) => a + b, 0);
   const tipoCambioTexto = str(formData, "tipoCambio");
   const tipoCambio = tipoCambioTexto ? num(formData, "tipoCambio") : null;
+
+  const detalleFleteUSA =
+    usaGastosFleteUSA && gastosMarcados.length > 0
+      ? gastosMarcados.map((g) => `${g.concepto}: ${formatMoneyPlano(g.monto)}`).join(" | ")
+      : null;
 
   const order = await prisma.paymentOrder.create({
     data: {
@@ -343,6 +386,7 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
       concepto,
       total,
       tipoCambio: tipoCambio && tipoCambio > 0 ? tipoCambio : null,
+      detalleFleteUSA,
       banco: str(formData, "banco"),
       direccionBanco: str(formData, "direccionBanco"),
       numeroCuenta: str(formData, "numeroCuenta"),
@@ -352,9 +396,57 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
     },
   });
 
+  if (gastosMarcados.length > 0) {
+    await prisma.gastoFleteUSA.updateMany({
+      where: { id: { in: gastosMarcados.map((g) => g.id) } },
+      data: { paymentOrderId: order.id },
+    });
+  }
+
   revalidatePath(`/embarques/${shipmentId}`);
   revalidatePath("/costos");
   redirect(`/orden-pago/${order.id}`);
+}
+
+// ---------------------------------------------------------------------------
+// Gastos de Flete USA (viáticos, vuelos, gastos generales, comisión, etc.)
+// ---------------------------------------------------------------------------
+
+function formatMoneyPlano(n: number) {
+  return `$${n.toLocaleString("es-MX", { maximumFractionDigits: 0 })}`;
+}
+
+async function recalcularCostoFleteUSA(shipmentId: string) {
+  const suma = await prisma.gastoFleteUSA.aggregate({
+    where: { shipmentId },
+    _sum: { monto: true },
+  });
+  await prisma.shipment.update({
+    where: { id: shipmentId },
+    data: { costoFleteUSA: suma._sum.monto ?? 0 },
+  });
+}
+
+export async function agregarGastoFleteUSA(shipmentId: string, formData: FormData) {
+  const concepto = str(formData, "concepto") ?? "Gasto";
+  const monto = num(formData, "monto");
+  const fecha = dateOrNull(formData, "fecha") ?? new Date();
+
+  await prisma.gastoFleteUSA.create({
+    data: { shipmentId, concepto, monto, fecha },
+  });
+  await recalcularCostoFleteUSA(shipmentId);
+
+  revalidatePath(`/embarques/${shipmentId}`);
+  revalidatePath("/costos");
+}
+
+export async function eliminarGastoFleteUSA(id: string) {
+  const gasto = await prisma.gastoFleteUSA.delete({ where: { id } });
+  await recalcularCostoFleteUSA(gasto.shipmentId);
+
+  revalidatePath(`/embarques/${gasto.shipmentId}`);
+  revalidatePath("/costos");
 }
 
 export async function marcarOrdenPagada(orderId: string): Promise<void> {
@@ -460,6 +552,96 @@ export async function deleteComment(id: string) {
   if (comment.shipmentId) {
     revalidatePath(`/embarques/${comment.shipmentId}`);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Cotizaciones
+// ---------------------------------------------------------------------------
+
+export async function crearCotizacion(formData: FormData) {
+  const folio = await nextCotizacionFolio();
+
+  const cotizacion = await prisma.cotizacion.create({
+    data: {
+      folio,
+      cliente: str(formData, "cliente") ?? "Sin cliente",
+      tipoMaquina: str(formData, "tipoMaquina") ?? "Equipo",
+      anio: str(formData, "anio"),
+      origenCiudad: str(formData, "origenCiudad"),
+      destinoCiudad: str(formData, "destinoCiudad"),
+      fotoUrl: str(formData, "fotoUrl"),
+      vendedor: str(formData, "vendedor"),
+      costoFleteUSA: num(formData, "costoFleteUSA"),
+      costoImportacion: num(formData, "costoImportacion"),
+      costoManiobras: num(formData, "costoManiobras"),
+      costoFleteMx: num(formData, "costoFleteMx"),
+      costoPermiso: num(formData, "costoPermiso"),
+      ivaPorcentaje: num(formData, "ivaPorcentaje"),
+    },
+  });
+
+  revalidatePath("/cotizaciones");
+  redirect(`/cotizaciones/${cotizacion.id}`);
+}
+
+export async function eliminarCotizacion(id: string) {
+  await prisma.cotizacion.delete({ where: { id } });
+  revalidatePath("/cotizaciones");
+  redirect("/cotizaciones");
+}
+
+export async function rechazarCotizacion(id: string) {
+  await prisma.cotizacion.update({ where: { id }, data: { estatus: "Rechazada" } });
+  revalidatePath("/cotizaciones");
+  revalidatePath(`/cotizaciones/${id}`);
+}
+
+// Cuando el cliente acepta la cotización, se da de alta como unidad real
+// (Shipment) para heredar gratis todo el seguimiento de Operaciones/Costos,
+// igual que se hizo con "Servicio Logístico". Queda ligada por shipmentId.
+export async function aceptarCotizacion(id: string) {
+  const cot = await prisma.cotizacion.findUnique({ where: { id } });
+  if (!cot || cot.shipmentId) return;
+
+  const folio = await nextFolio();
+  const shipment = await prisma.shipment.create({
+    data: {
+      folio,
+      equipoDescripcion: `${cot.tipoMaquina}${cot.anio ? ` ${cot.anio}` : ""}`,
+      serie: "S/N",
+      cliente: cot.cliente,
+      vendedor: cot.vendedor,
+      fotoUrl: cot.fotoUrl,
+      estatus: "Pendiente",
+      origenCiudad: cot.origenCiudad,
+      destinoCiudad: cot.destinoCiudad,
+      costoFleteUSA: cot.costoFleteUSA,
+      costoImportacion: cot.costoImportacion,
+      costoManiobras: cot.costoManiobras,
+      costoFleteMx: cot.costoFleteMx,
+      costoPermiso: cot.costoPermiso,
+      fechaInicio: new Date(),
+    },
+  });
+
+  await prisma.statusEvent.create({
+    data: {
+      shipmentId: shipment.id,
+      estatusNuevo: shipment.estatus,
+      usuario: cot.vendedor ?? "Sistema",
+      comentario: `Unidad dada de alta a partir de la cotización ${cot.folio} (aceptada por el cliente)`,
+    },
+  });
+
+  await prisma.cotizacion.update({
+    where: { id: cot.id },
+    data: { estatus: "Aceptada", shipmentId: shipment.id },
+  });
+
+  revalidatePath("/cotizaciones");
+  revalidatePath("/");
+  revalidatePath("/operaciones");
+  redirect(`/embarques/${shipment.id}`);
 }
 
 // ---------------------------------------------------------------------------

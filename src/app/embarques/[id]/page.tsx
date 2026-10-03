@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import TopBar from "@/components/TopBar";
 import { Card, CardHeader, StatusBadge, EmptyState, SerieTag, ClockBadge, MoneyInput } from "@/components/ui";
 import UserSelect from "@/components/UserSelect";
+import SelectOrNew from "@/components/SelectOrNew";
+import ConfirmZeroCostButton from "@/components/ConfirmZeroCostButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import FotoEquipo from "@/components/FotoEquipo";
-import { getShipment } from "@/lib/queries";
+import { getShipment, getProveedores } from "@/lib/queries";
 import {
   updateShipmentEstatusForm,
   updateShipmentInfo,
@@ -16,8 +18,19 @@ import {
   createComment,
   resolveComment,
   deleteShipment,
+  agregarGastoFleteUSA,
+  eliminarGastoFleteUSA,
 } from "@/lib/actions";
-import { ADUANAS, ESTATUS_FLOW, TIPOS_UNIDAD, estatusInfo, formatFecha, formatMXN } from "@/lib/constants";
+import {
+  ADUANAS,
+  ESTATUS_FLOW,
+  TIPOS_UNIDAD,
+  VENDEDORES,
+  CONCEPTOS_GASTO_FLETE_USA,
+  estatusInfo,
+  formatFecha,
+  formatMXN,
+} from "@/lib/constants";
 import { calcularDuracionPorEtapa } from "@/lib/ciclo";
 import { Trash2, Printer } from "lucide-react";
 
@@ -30,7 +43,7 @@ function dateInputValue(d: Date | null | undefined) {
 
 export default async function EmbarqueDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const shipment = await getShipment(id);
+  const [shipment, proveedores] = await Promise.all([getShipment(id), getProveedores()]);
   if (!shipment) notFound();
 
   const totalCostos =
@@ -50,7 +63,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
 
   return (
     <>
-      <TopBar title={shipment.folio} subtitle={shipment.equipoDescripcion} />
+      <TopBar title={shipment.folio} subtitle={shipment.equipoDescripcion} showBack />
       <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
         <Card className="p-4 md:p-5">
           <div className="flex flex-col md:flex-row gap-4">
@@ -161,7 +174,12 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
               </label>
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-ink-secondary">Vendedor</span>
-                <input name="vendedor" defaultValue={shipment.vendedor ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm" />
+                <SelectOrNew
+                  name="vendedor"
+                  options={VENDEDORES}
+                  defaultValue={shipment.vendedor ?? ""}
+                  placeholder="Nombre del vendedor"
+                />
               </label>
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-ink-secondary">Origen</span>
@@ -196,15 +214,27 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
               </label>
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-ink-secondary">Proveedor de compra</span>
-                <input name="proveedorCompra" defaultValue={shipment.proveedorCompra ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm" />
+                <SelectOrNew
+                  name="proveedorCompra"
+                  options={proveedores.proveedorCompra}
+                  defaultValue={shipment.proveedorCompra ?? ""}
+                />
               </label>
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-ink-secondary">Proveedor flete USA</span>
-                <input name="provFleteUSA" defaultValue={shipment.provFleteUSA ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm" />
+                <SelectOrNew
+                  name="provFleteUSA"
+                  options={proveedores.provFleteUSA}
+                  defaultValue={shipment.provFleteUSA ?? ""}
+                />
               </label>
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-ink-secondary">Agente aduanal</span>
-                <input name="provAgenteAduanal" defaultValue={shipment.provAgenteAduanal ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm" />
+                <SelectOrNew
+                  name="provAgenteAduanal"
+                  options={proveedores.provAgenteAduanal}
+                  defaultValue={shipment.provAgenteAduanal ?? ""}
+                />
               </label>
               <label className="flex flex-col gap-1 text-sm sm:col-span-2">
                 <span className="text-ink-secondary">Incidencias / notas</span>
@@ -265,10 +295,24 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-ink-secondary">Flete USA</span>
-                      <MoneyInput name="costoFleteUSA" defaultValue={shipment.costoFleteUSA} />
-                    </label>
+                    {shipment.gastosFleteUSA.length > 0 ? (
+                      <div className="flex flex-col gap-1 text-sm">
+                        <span className="text-ink-secondary">Flete USA</span>
+                        <div className="rounded-lg border border-border px-3 py-2 text-sm bg-surface-muted text-ink-primary font-medium">
+                          {formatMXN(shipment.costoFleteUSA)}
+                        </div>
+                        <span className="text-xs text-ink-muted">
+                          Suma de {shipment.gastosFleteUSA.length} gasto{shipment.gastosFleteUSA.length === 1 ? "" : "s"} — se
+                          administra abajo
+                        </span>
+                        <input type="hidden" name="costoFleteUSA" value={shipment.costoFleteUSA} />
+                      </div>
+                    ) : (
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-ink-secondary">Flete USA</span>
+                        <MoneyInput name="costoFleteUSA" defaultValue={shipment.costoFleteUSA} />
+                      </label>
+                    )}
                     <label className="flex flex-col gap-1 text-sm">
                       <span className="text-ink-secondary">Importación</span>
                       <MoneyInput name="costoImportacion" defaultValue={shipment.costoImportacion} />
@@ -303,6 +347,64 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
               </form>
             </Card>
 
+            {!esServicio && (
+              <Card>
+                <CardHeader
+                  title="Gastos de Flete USA"
+                  subtitle="Viáticos, vuelos, gastos generales, comisión... se van sumando solos al costo de Flete USA"
+                />
+                <div className="p-5 space-y-4">
+                  {shipment.gastosFleteUSA.length === 0 ? (
+                    <EmptyState text="Todavía no hay gastos capturados para esta unidad." />
+                  ) : (
+                    <ul className="divide-y divide-border -mx-5 -mt-1">
+                      {shipment.gastosFleteUSA.map((g) => (
+                        <li key={g.id} className="px-5 py-2.5 flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm text-ink-primary">{g.concepto}</p>
+                            <p className="text-xs text-ink-muted">
+                              {formatFecha(g.fecha)}
+                              {g.paymentOrderId ? (
+                                <span className="text-brand-blue-700"> · ya incluido en una orden</span>
+                              ) : (
+                                <span> · pendiente de pagar</span>
+                              )}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="text-sm font-medium text-ink-primary">{formatMXN(g.monto)}</span>
+                            {!g.paymentOrderId && (
+                              <form action={eliminarGastoFleteUSA.bind(null, g.id)}>
+                                <ConfirmSubmitButton
+                                  confirmText={`¿Eliminar el gasto "${g.concepto}" de ${formatMXN(g.monto)}?`}
+                                  className="text-ink-muted hover:text-red-600"
+                                  title="Eliminar gasto"
+                                >
+                                  <Trash2 size={14} />
+                                </ConfirmSubmitButton>
+                              </form>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <form
+                    action={agregarGastoFleteUSA.bind(null, shipment.id)}
+                    className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] gap-2 pt-2 border-t border-border"
+                  >
+                    <SelectOrNew name="concepto" options={CONCEPTOS_GASTO_FLETE_USA} placeholder="Concepto del gasto" />
+                    <MoneyInput name="monto" className="w-full sm:w-28 rounded-lg border border-border px-3 py-2 text-sm" />
+                    <input type="date" name="fecha" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                    <button className="rounded-lg bg-brand-blue-600 hover:bg-brand-blue-700 text-white text-sm font-medium px-4 py-2">
+                      Agregar
+                    </button>
+                  </form>
+                </div>
+              </Card>
+            )}
+
             <Card>
               <CardHeader
                 title="Orden de pago"
@@ -311,8 +413,44 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
               <div className="p-5 space-y-4">
                 <form action={generarOrdenDePago.bind(null, shipment.id)} className="space-y-3">
                   <div className="space-y-1.5">
+                    {(() => {
+                      const gastosPendientes = shipment.gastosFleteUSA.filter((g) => !g.paymentOrderId);
+                      if (gastosPendientes.length > 0) {
+                        return (
+                          <div className="rounded-lg border border-border px-3 py-2 space-y-2">
+                            <label className="flex items-center gap-2 text-sm font-medium text-ink-secondary">
+                              <input type="checkbox" name="incluirFleteUSA" defaultChecked />
+                              Flete USA — elige qué gastos mandar a esta orden:
+                            </label>
+                            <div className="pl-6 space-y-1.5">
+                              {gastosPendientes.map((g) => (
+                                <label key={g.id} className="flex items-center justify-between gap-2 text-xs text-ink-secondary">
+                                  <span className="flex items-center gap-1.5">
+                                    <input type="checkbox" name={`gasto_${g.id}`} data-monto={g.monto} defaultChecked />
+                                    {g.concepto}
+                                  </span>
+                                  <span className="text-ink-primary font-medium">{formatMXN(g.monto)}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return (
+                        <label className="flex items-center justify-between gap-2 text-sm rounded-lg border border-border px-3 py-2">
+                          <span className="flex items-center gap-2 text-ink-secondary shrink-0">
+                            <input type="checkbox" name="incluirFleteUSA" defaultChecked />
+                            Flete USA
+                          </span>
+                          <MoneyInput
+                            name="costoFleteUSA"
+                            defaultValue={shipment.costoFleteUSA}
+                            className="w-28 rounded-md border border-border px-2 py-1 text-right text-sm"
+                          />
+                        </label>
+                      );
+                    })()}
                     {[
-                      { check: "incluirFleteUSA", campo: "costoFleteUSA", label: "Flete USA", monto: shipment.costoFleteUSA },
                       { check: "incluirImportacion", campo: "costoImportacion", label: "Importación / Aduana", monto: shipment.costoImportacion },
                       { check: "incluirManiobras", campo: "costoManiobras", label: "Maniobra/Reparación", monto: shipment.costoManiobras },
                       { check: "incluirFleteMx", campo: "costoFleteMx", label: "Flete México", monto: shipment.costoFleteMx },
@@ -370,10 +508,10 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                   </div>
 
                   <input name="notas" placeholder="Notas para administración (opcional)" className="w-full rounded-lg border border-border px-3 py-2 text-sm" />
-                  <button className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand-orange-500 hover:bg-brand-orange-600 text-white text-sm font-medium py-2.5">
+                  <ConfirmZeroCostButton className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand-orange-500 hover:bg-brand-orange-600 text-white text-sm font-medium py-2.5">
                     <Printer size={16} />
                     Generar e imprimir orden de pago
-                  </button>
+                  </ConfirmZeroCostButton>
                 </form>
 
                 {shipment.paymentOrders.length > 0 && (

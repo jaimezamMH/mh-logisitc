@@ -38,6 +38,38 @@ function costosPorConceptoDe(unidades: ConCostos[]) {
   );
 }
 
+// Cuánto dinero/trabajo se le dio a cada proveedor en un periodo, y qué % del
+// total de ese concepto representa — solo cuenta unidades con monto > 0 (no
+// tiene caso listar "proveedor sin costo"). Si el monto existe pero no hay
+// proveedor capturado, se agrupa bajo "Sin proveedor capturado" para que se
+// note el hueco de datos en vez de perderse silenciosamente.
+function agruparPorProveedor<T extends Record<string, unknown>>(
+  unidades: T[],
+  campoProveedor: keyof T,
+  campoCosto: keyof T
+) {
+  const mapa = new Map<string, { monto: number; n: number }>();
+  let total = 0;
+  for (const s of unidades) {
+    const monto = (s[campoCosto] as number) ?? 0;
+    if (monto <= 0) continue;
+    const proveedor = ((s[campoProveedor] as string | null)?.trim()) || "Sin proveedor capturado";
+    const entry = mapa.get(proveedor) ?? { monto: 0, n: 0 };
+    entry.monto += monto;
+    entry.n += 1;
+    mapa.set(proveedor, entry);
+    total += monto;
+  }
+  return Array.from(mapa.entries())
+    .map(([proveedor, { monto, n }]) => ({
+      proveedor,
+      monto,
+      n,
+      pct: total > 0 ? Math.round((monto / total) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.monto - a.monto);
+}
+
 export async function getAgendaHoy() {
   const today = new Date();
   const todayStart = startOfDay(today);
@@ -133,6 +165,7 @@ export async function getDashboardData() {
     totalCostosActivos,
     costosPorConcepto,
     enAgencia: activos.filter((s) => s.estatus === "Agencia"),
+    enFleteMexico: activos.filter((s) => s.estatus === "Flete México"),
     recientes: shipments.slice(0, 8),
   };
 }
@@ -152,8 +185,51 @@ export async function getShipment(id: string) {
       comments: { orderBy: { createdAt: "desc" } },
       paymentOrders: { orderBy: { fechaGenerada: "desc" } },
       sales: true,
+      gastosFleteUSA: { orderBy: { fecha: "desc" } },
     },
   });
+}
+
+export async function getCotizaciones() {
+  return prisma.cotizacion.findMany({
+    orderBy: { fecha: "desc" },
+    include: { shipment: { select: { id: true, folio: true } } },
+  });
+}
+
+export async function getCotizacion(id: string) {
+  return prisma.cotizacion.findUnique({ where: { id } });
+}
+
+// Nombres de proveedores/agentes ya usados en el sistema (unidades reales +
+// histórico del PDF), para ofrecerlos como sugerencia en vez de escribirlos
+// de nuevo cada vez. No es una lista cerrada (se puede seguir escribiendo
+// uno nuevo), solo evita repetir texto para los que ya se usan seguido.
+export async function getProveedores() {
+  const [shipments, historico] = await Promise.all([
+    prisma.shipment.findMany({
+      select: { proveedorCompra: true, provFleteUSA: true, provAgenteAduanal: true },
+    }),
+    prisma.costoHistorico.findMany({
+      select: { proveedorCompra: true, provFleteUSA: true, provAgenteAduanal: true },
+    }),
+  ]);
+
+  const todos = [...shipments, ...historico];
+  const unico = (campo: "proveedorCompra" | "provFleteUSA" | "provAgenteAduanal") =>
+    Array.from(
+      new Set(
+        todos
+          .map((r) => r[campo]?.trim())
+          .filter((v): v is string => !!v)
+      )
+    ).sort((a, b) => a.localeCompare(b, "es"));
+
+  return {
+    proveedorCompra: unico("proveedorCompra"),
+    provFleteUSA: unico("provFleteUSA"),
+    provAgenteAduanal: unico("provAgenteAduanal"),
+  };
 }
 
 export async function getOrigenPorEstado() {
@@ -481,6 +557,23 @@ export async function getReporteRango(from: Date, to: Date) {
   );
   const costosPorConcepto = costosPorConceptoDe(entregas);
 
+  // Pagos por proveedor — solo de los 2 conceptos que sí tienen proveedor
+  // capturado en el sistema (Flete USA y el agente que hace la importación).
+  // Flete México y Maniobras/Permiso todavía no tienen un campo de
+  // proveedor propio en el modelo de datos, por eso no se desglosan aquí.
+  const proveedoresFleteUSA = agruparPorProveedor(entregas, "provFleteUSA", "costoFleteUSA");
+  const proveedoresAgenteAduanal = agruparPorProveedor(entregas, "provAgenteAduanal", "costoImportacion");
+
+  // Costo promedio por unidad entregada en el periodo, por concepto.
+  const n = entregas.length || 1;
+  const costoPromedioPorConcepto = {
+    fleteUSA: costosPorConcepto.fleteUSA / n,
+    importacion: costosPorConcepto.importacion / n,
+    maniobras: costosPorConcepto.maniobras / n,
+    fleteMx: costosPorConcepto.fleteMx / n,
+    permiso: costosPorConcepto.permiso / n,
+  };
+
   // Ciclo promedio (días) de las unidades entregadas en este periodo.
   const ciclos = entregas
     .map((s) => s.tiempoCicloDias ?? diasEnProceso(s.fechaInicio, s.fechaEntrega))
@@ -514,6 +607,9 @@ export async function getReporteRango(from: Date, to: Date) {
     totalPagado,
     costoTotalUSD,
     costosPorConcepto,
+    proveedoresFleteUSA,
+    proveedoresAgenteAduanal,
+    costoPromedioPorConcepto,
     cicloPromedioDias,
     etapasPromedio,
   };

@@ -126,6 +126,31 @@ export const ESTATUS_ACTIVOS: EstatusKey[] = [
 export const USUARIOS = ["Jaime Zamudio", "Raúl Favela", "Otro"] as const;
 export type Usuario = (typeof USUARIOS)[number];
 
+export const VENDEDORES = [
+  "No vendida",
+  "Antonio Montes",
+  "Martin Gonzalez",
+  "Javier Lopez Molino",
+  "Ivan Lopez",
+  "David Olivas",
+  "Jaime Zamudio",
+  "Raul Favela",
+  "Carlos Campillo",
+] as const;
+
+// Conceptos comunes que componen el costo de Flete USA (no es un solo viaje,
+// son varios gastos que se van sumando) — sugerencia, no lista cerrada.
+export const CONCEPTOS_GASTO_FLETE_USA = ["Viáticos", "Vuelos", "Gastos generales", "Comisión"] as const;
+
+// Datos de contacto de la empresa para la cotización impresa/PDF que se le
+// manda al cliente (tomados de la plantilla de cotización real de Jaime).
+export const CONTACTO_EMPRESA = {
+  nombre: "Machinery Hunters",
+  direccion: "Av. Obregón, Calle 32 y 33, San Luis Río Colorado, Sonora",
+  correo: "jaime@machineryhunters.com",
+  telefono: "653-114-5262",
+};
+
 export const ADUANAS = [
   "Calexico Ca",
   "Laredo Tx",

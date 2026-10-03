@@ -1,13 +1,17 @@
 import TopBar from "@/components/TopBar";
 import { Card, CardHeader } from "@/components/ui";
-import UserSelect from "@/components/UserSelect";
+import SelectOrNew from "@/components/SelectOrNew";
 import { createShipment } from "@/lib/actions";
-import { ADUANAS, ESTATUS_FLOW, TIPOS_UNIDAD } from "@/lib/constants";
+import { getProveedores } from "@/lib/queries";
+import { ADUANAS, ESTATUS_FLOW, TIPOS_UNIDAD, VENDEDORES } from "@/lib/constants";
 
-export default function NuevoEmbarquePage() {
+export const dynamic = "force-dynamic";
+
+export default async function NuevoEmbarquePage() {
+  const proveedores = await getProveedores();
   return (
     <>
-      <TopBar title="Nueva unidad" subtitle="Da de alta un equipo para darle seguimiento" />
+      <TopBar title="Nueva unidad" subtitle="Da de alta un equipo para darle seguimiento" showBack />
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <Card className="max-w-3xl mx-auto">
           <CardHeader title="Datos del equipo" />
@@ -53,7 +57,10 @@ export default function NuevoEmbarquePage() {
               <input name="cliente" required className="rounded-lg border border-border px-3 py-2 text-sm" />
             </label>
 
-            <UserSelect name="vendedor" label="Vendedor" />
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Vendedor</span>
+              <SelectOrNew name="vendedor" options={VENDEDORES} placeholder="Nombre del vendedor" />
+            </label>
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-ink-secondary">Estatus inicial</span>
@@ -105,17 +112,17 @@ export default function NuevoEmbarquePage() {
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-ink-secondary">Proveedor de compra</span>
-              <input name="proveedorCompra" className="rounded-lg border border-border px-3 py-2 text-sm" />
+              <SelectOrNew name="proveedorCompra" options={proveedores.proveedorCompra} />
             </label>
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-ink-secondary">Proveedor flete USA</span>
-              <input name="provFleteUSA" className="rounded-lg border border-border px-3 py-2 text-sm" />
+              <SelectOrNew name="provFleteUSA" options={proveedores.provFleteUSA} />
             </label>
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-ink-secondary">Agente aduanal</span>
-              <input name="provAgenteAduanal" className="rounded-lg border border-border px-3 py-2 text-sm" />
+              <SelectOrNew name="provAgenteAduanal" options={proveedores.provAgenteAduanal} />
             </label>
 
             <div className="sm:col-span-2 flex justify-end gap-3 pt-2">

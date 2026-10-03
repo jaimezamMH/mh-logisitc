@@ -73,10 +73,12 @@ model Shipment {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  statusEvents  StatusEvent[]
-  comments      Comment[]
-  paymentOrders PaymentOrder[]
-  sales         Sale[]
+  statusEvents   StatusEvent[]
+  comments       Comment[]
+  paymentOrders  PaymentOrder[]
+  sales          Sale[]
+  cotizacion     Cotizacion?
+  gastosFleteUSA GastoFleteUSA[]
 
   @@index([estatus])
   @@index([fechaSalidaProgramada])
@@ -124,7 +126,34 @@ model PaymentOrder {
   titular           String?
   direccionTitular  String?
 
+  // Desglose de los gastos de Flete USA incluidos en esta orden (viáticos,
+  // vuelos, comisión, etc. — texto simple "concepto: monto | concepto: monto"
+  // para mostrarlo en la orden impresa sin tener que hacer otra consulta).
+  detalleFleteUSA   String?
+  gastosFleteUSA    GastoFleteUSA[]
+
   @@index([shipmentId])
+}
+
+// Un gasto individual que compone el costo de Flete USA de una unidad (no es
+// un solo viaje — son varios conceptos que se van sumando: viáticos, vuelos,
+// gastos generales, comisión, etc.). El total de estos gastos es lo que se
+// guarda en Shipment.costoFleteUSA. Cuando se incluye en una orden de pago,
+// queda ligado a esa orden (paymentOrderId) para no volver a incluirlo dos
+// veces por accidente.
+model GastoFleteUSA {
+  id             String        @id @default(cuid())
+  shipmentId     String
+  shipment       Shipment      @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  concepto       String
+  monto          Float
+  fecha          DateTime      @default(now())
+  paymentOrderId String?
+  paymentOrder   PaymentOrder? @relation(fields: [paymentOrderId], references: [id])
+  createdAt      DateTime      @default(now())
+
+  @@index([shipmentId])
+  @@index([paymentOrderId])
 }
 
 // Ventas / ciclo de venta. Puede o no estar ligada a un embarque específico
@@ -146,6 +175,39 @@ model Sale {
 
   @@index([mes])
   @@index([vendedor])
+}
+
+// Cotización enviada a un cliente (prospecto de venta todavía no confirmada).
+// Si el cliente la acepta, se convierte en una unidad real (Shipment) y
+// queda ligada aquí via shipmentId.
+model Cotizacion {
+  id                String   @id @default(cuid())
+  folio             String   @unique
+  fecha             DateTime @default(now())
+
+  cliente           String
+  tipoMaquina       String
+  anio              String?
+  origenCiudad      String?
+  destinoCiudad     String?
+  fotoUrl           String?
+  vendedor          String?
+
+  costoFleteUSA     Float    @default(0)
+  costoImportacion  Float    @default(0)
+  costoManiobras    Float    @default(0)
+  costoFleteMx      Float    @default(0)
+  costoPermiso      Float    @default(0)
+  ivaPorcentaje     Float    @default(0) // 0 = no se cobra IVA en esta cotización
+
+  estatus           String   @default("Pendiente") // Pendiente | Aceptada | Rechazada
+
+  shipmentId        String?  @unique
+  shipment          Shipment? @relation(fields: [shipmentId], references: [id])
+
+  createdAt         DateTime @default(now())
+
+  @@index([estatus])
 }
 
 // Historial de costos por proveedor (tabla del PDF sin vínculo confirmado a

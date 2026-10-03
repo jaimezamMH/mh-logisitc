@@ -63,7 +63,10 @@ export default async function OperacionesPage({
                         )}
                         <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-ink-primary line-clamp-2">{s.equipoDescripcion}</p>
-                        <p className="text-xs text-ink-muted mt-1">{s.cliente}</p>
+                        <p className="text-xs text-ink-muted mt-1">
+                          {s.cliente}
+                          {s.vendedor && <span> · {s.vendedor}</span>}
+                        </p>
                         <div className="flex items-center justify-between mt-1.5">
                           <SerieTag serie={s.serie} />
                           <ClockBadge fechaInicio={s.fechaInicio} fechaEntrega={s.fechaEntrega} tiempoCicloDias={s.tiempoCicloDias} />
@@ -103,7 +106,10 @@ export default async function OperacionesPage({
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{s.equipoDescripcion}</p>
                   <p className="text-xs text-ink-muted truncate flex items-center gap-2">
-                    <span>{s.cliente}</span>
+                    <span>
+                      {s.cliente}
+                      {s.vendedor && <> · {s.vendedor}</>}
+                    </span>
                     <SerieTag serie={s.serie} />
                   </p>
                 </div>

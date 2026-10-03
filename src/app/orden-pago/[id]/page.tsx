@@ -61,8 +61,8 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto bg-white shadow-sm print:shadow-none my-8 print:my-0 p-10 print:p-8">
-        <div className="flex items-start justify-between border-b-4 border-brand-navy pb-6 mb-6">
+      <div className="max-w-3xl mx-auto bg-white shadow-sm print:shadow-none my-8 print:my-0 p-10 print:p-5 print:text-sm">
+        <div className="flex items-start justify-between border-b-4 border-brand-navy pb-6 mb-6 print:pb-3 print:mb-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <div className="h-10 w-10 rounded-lg bg-brand-orange-500 flex items-center justify-center font-bold text-white">
@@ -93,13 +93,13 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
           </div>
         </div>
 
-        <div className="flex gap-6 mb-8">
+        <div className="flex gap-6 mb-8 print:mb-4">
           {s.fotoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={s.fotoUrl}
               alt={s.equipoDescripcion}
-              className="w-32 h-32 object-cover rounded-lg border border-border shrink-0"
+              className="w-32 h-32 print:w-20 print:h-20 object-cover rounded-lg border border-border shrink-0"
             />
           )}
           <div className="grid grid-cols-2 gap-6 text-sm flex-1">
@@ -123,7 +123,7 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
           </div>
         </div>
 
-        <table className="w-full text-sm mb-6">
+        <table className="w-full text-sm mb-6 print:mb-3">
           <thead>
             <tr className="border-b-2 border-brand-navy text-left">
               <th className="py-2 text-ink-secondary font-medium">Concepto</th>
@@ -137,6 +137,13 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
                 <td className="py-2.5 text-right text-ink-primary">{formatMXN(l.valor)}</td>
               </tr>
             ))}
+            {order.detalleFleteUSA && (
+              <tr className="border-b border-border">
+                <td colSpan={2} className="pb-2.5 pt-0.5 text-xs text-ink-muted">
+                  Flete USA incluye: {order.detalleFleteUSA.replaceAll(" | ", " · ")}
+                </td>
+              </tr>
+            )}
           </tbody>
           <tfoot>
             <tr>
@@ -147,16 +154,16 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
         </table>
 
         {order.tipoCambio && order.tipoCambio > 0 && (
-          <div className="mb-8 rounded-xl bg-brand-blue-50 border border-brand-blue-100 p-5 text-center">
+          <div className="mb-8 print:mb-4 rounded-xl bg-brand-blue-50 border border-brand-blue-100 p-5 print:p-3 text-center">
             <p className="text-xs uppercase tracking-wide text-ink-muted mb-1">
               Total en pesos mexicanos · T.C. {order.tipoCambio.toFixed(2)}
             </p>
-            <p className="text-4xl font-extrabold text-brand-navy">{formatPesos(order.total * order.tipoCambio)}</p>
+            <p className="text-4xl print:text-2xl font-extrabold text-brand-navy">{formatPesos(order.total * order.tipoCambio)}</p>
           </div>
         )}
 
         {(order.banco || order.numeroCuenta || order.clabe || order.titular) && (
-          <div className="mb-8 text-sm border border-border rounded-lg p-4">
+          <div className="mb-8 print:mb-4 text-sm border border-border rounded-lg p-4 print:p-3">
             <p className="text-xs uppercase tracking-wide text-ink-muted mb-2 font-semibold">Datos bancarios para el pago</p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2">
               {order.banco && (
@@ -200,13 +207,13 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
         )}
 
         {order.notas && (
-          <div className="mb-8 text-sm">
+          <div className="mb-8 print:mb-4 text-sm">
             <p className="text-xs uppercase tracking-wide text-ink-muted mb-1">Notas</p>
             <p className="text-ink-primary">{order.notas}</p>
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-10 mt-16 pt-8">
+        <div className="grid grid-cols-2 gap-10 mt-16 pt-8 print:mt-8 print:pt-3">
           <div className="text-center">
             <div className="border-t border-gray-400 pt-2">
               <p className="text-sm font-medium text-ink-primary">Gabriel Buchanan</p>

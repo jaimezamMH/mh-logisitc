@@ -56,7 +56,7 @@ export default async function CostosPage({
   const [shipmentsTodos, ordenesTodas] = await Promise.all([
     prisma.shipment.findMany({
       orderBy: { updatedAt: "desc" },
-      include: { _count: { select: { paymentOrders: true } } },
+      include: { _count: { select: { paymentOrders: true, gastosFleteUSA: true } } },
     }),
     prisma.paymentOrder.findMany({ include: { shipment: true }, orderBy: { fechaGenerada: "desc" } }),
   ]);
@@ -219,7 +219,9 @@ export default async function CostosPage({
           {shipments.length === 0 ? (
             <EmptyState text="No hay unidades con este filtro." />
           ) : (
-            <CostosEditableTable shipments={shipments} />
+            <CostosEditableTable
+              shipments={shipments.map((s) => ({ ...s, tieneGastosFleteUSA: s._count.gastosFleteUSA > 0 }))}
+            />
           )}
         </Card>
       </main>

@@ -99,6 +99,11 @@ body {
   background: transparent;
 }
 
+@page {
+  size: letter;
+  margin: 1.2cm;
+}
+
 @media print {
   .no-print {
     display: none !important;

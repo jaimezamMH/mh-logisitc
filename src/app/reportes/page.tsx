@@ -39,6 +39,94 @@ function CostosPorConcepto({ costos }: { costos: { fleteUSA: number; importacion
   );
 }
 
+function TablaProveedor({
+  titulo,
+  filas,
+}: {
+  titulo: string;
+  filas: { proveedor: string; monto: number; n: number; pct: number }[];
+}) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-ink-muted uppercase tracking-wide mb-2">{titulo}</p>
+      {filas.length === 0 ? (
+        <p className="text-sm text-ink-muted">Sin movimientos en este periodo.</p>
+      ) : (
+        <div className="space-y-2.5">
+          {filas.map((f) => (
+            <div key={f.proveedor}>
+              <div className="flex items-center justify-between text-sm mb-1">
+                <span className="text-ink-primary truncate">
+                  {f.proveedor} <span className="text-ink-muted">({f.n} servicio{f.n === 1 ? "" : "s"})</span>
+                </span>
+                <span className="text-ink-muted shrink-0 ml-2">
+                  {formatMXN(f.monto)} · {f.pct}%
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden">
+                <div className="h-full rounded-full bg-brand-blue-500" style={{ width: `${f.pct}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PagosPorProveedor({
+  proveedoresFleteUSA,
+  proveedoresAgenteAduanal,
+}: {
+  proveedoresFleteUSA: { proveedor: string; monto: number; n: number; pct: number }[];
+  proveedoresAgenteAduanal: { proveedor: string; monto: number; n: number; pct: number }[];
+}) {
+  return (
+    <Card>
+      <CardHeader
+        title="Pagos por proveedor"
+        subtitle="% del trabajo (en dinero) que le damos a cada quien, de las unidades entregadas en este periodo"
+      />
+      <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <TablaProveedor titulo="Flete USA" filas={proveedoresFleteUSA} />
+        <TablaProveedor titulo="Importación / Agente aduanal" filas={proveedoresAgenteAduanal} />
+      </div>
+      <p className="px-5 pb-4 text-xs text-ink-muted">
+        Flete México y Maniobras/Permiso todavía no tienen un campo de proveedor capturado en el sistema, por eso no
+        aparecen aquí desglosados.
+      </p>
+    </Card>
+  );
+}
+
+function CostoPromedio({
+  costos,
+}: {
+  costos: { fleteUSA: number; importacion: number; maniobras: number; fleteMx: number; permiso: number };
+}) {
+  const conceptos = [
+    { label: "Flete USA", value: costos.fleteUSA, icon: Truck },
+    { label: "Importación / Aduana", value: costos.importacion, icon: Landmark },
+    { label: "Maniobra/Reparación", value: costos.maniobras, icon: Wrench },
+    { label: "Flete México", value: costos.fleteMx, icon: Ship },
+    { label: "Permiso/Seguro", value: costos.permiso, icon: Signpost },
+  ];
+  return (
+    <Card>
+      <CardHeader title="Costo promedio por unidad" subtitle="Promedio de las unidades entregadas este mes, por concepto" />
+      <div className="p-5 grid grid-cols-2 sm:grid-cols-5 gap-4">
+        {conceptos.map((c) => (
+          <div key={c.label} className="rounded-lg border border-border p-3">
+            <c.icon size={16} className="text-brand-blue-600 mb-1.5" />
+            <p className="text-lg font-semibold text-ink-primary">{formatMXN(c.value)}</p>
+            <p className="text-xs text-ink-muted mt-0.5">{c.label}</p>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function analisisCiclo(etapasPromedio: { estatus: string; promedioDias: number; n: number }[], cicloPromedioDias: number | null) {
   const top = etapasPromedio[0];
   if (!top) return null;
@@ -302,7 +390,10 @@ export default async function ReportesPage({
                     <li key={e.id} className="px-5 py-3 flex items-center justify-between gap-3">
                       <div>
                         <p className="text-sm text-ink-primary flex items-center gap-2 flex-wrap">
-                          <span>{e.shipment.equipoDescripcion} — {e.shipment.cliente}</span>
+                          <span>
+                            {e.shipment.equipoDescripcion} — {e.shipment.cliente}
+                            {e.shipment.vendedor && <span className="text-ink-muted"> ({e.shipment.vendedor})</span>}
+                          </span>
                           <SerieTag serie={e.shipment.serie} />
                         </p>
                         <p className="text-xs text-ink-muted">
@@ -457,6 +548,13 @@ export default async function ReportesPage({
 
             <CostosPorConcepto costos={activo.costosPorConcepto} />
 
+            {vista === "mensual" && <CostoPromedio costos={activo.costoPromedioPorConcepto} />}
+
+            <PagosPorProveedor
+              proveedoresFleteUSA={activo.proveedoresFleteUSA}
+              proveedoresAgenteAduanal={activo.proveedoresAgenteAduanal}
+            />
+
             <AnalisisDeCiclo cicloPromedioDias={activo.cicloPromedioDias} etapasPromedio={activo.etapasPromedio} />
 
             <Card>
@@ -473,7 +571,10 @@ export default async function ReportesPage({
                           <SerieTag serie={s.serie} />
                         </p>
                         <p className="text-xs text-ink-muted flex items-center gap-2">
-                          <span>{s.cliente} · {s.folio}</span>
+                          <span>
+                            {s.cliente} · {s.folio}
+                            {s.vendedor && <> · {s.vendedor}</>}
+                          </span>
                           <ClockBadge fechaInicio={s.fechaInicio} fechaEntrega={s.fechaEntrega} tiempoCicloDias={s.tiempoCicloDias} />
                         </p>
                       </div>

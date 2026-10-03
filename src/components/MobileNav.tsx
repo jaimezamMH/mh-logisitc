@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Truck, Map, Wallet, BarChart3, FileClock, Handshake } from "lucide-react";
+import { LayoutDashboard, Truck, Map, Wallet, BarChart3, FileClock, FileText, Handshake } from "lucide-react";
 
 const NAV = [
   { href: "/", label: "Inicio", icon: LayoutDashboard },
   { href: "/operaciones", label: "Operaciones", icon: Truck },
   { href: "/mapa", label: "Mapa", icon: Map },
   { href: "/costos", label: "Costos", icon: Wallet },
+  { href: "/cotizaciones", label: "Cotiz.", icon: FileText },
   { href: "/ventas", label: "Ventas", icon: Handshake },
   { href: "/analitica", label: "Analítica", icon: BarChart3 },
   { href: "/reportes", label: "Reportes", icon: FileClock },

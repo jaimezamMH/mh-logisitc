@@ -1,10 +1,10 @@
 import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import { Card, CardHeader, EmptyState, Pill, SerieTag, ClockBadge, StatCard, StatusBadge } from "@/components/ui";
-import UserSelect from "@/components/UserSelect";
+import SelectOrNew from "@/components/SelectOrNew";
 import { createSale, crearVentaServicio } from "@/lib/actions";
 import { getVentas, getVentasPorVendedor, getVentasServicioLogistico } from "@/lib/queries";
-import { MESES, TIPOS_UNIDAD, formatFecha, formatMXN, ADUANAS } from "@/lib/constants";
+import { MESES, TIPOS_UNIDAD, formatFecha, formatMXN, ADUANAS, VENDEDORES } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { Handshake, TrendingUp, Layers } from "lucide-react";
 
@@ -66,7 +66,10 @@ export default async function VentasPage() {
                   <span className="text-ink-secondary">Serie (opcional)</span>
                   <input name="serie" className="rounded-lg border border-border px-3 py-2 text-sm" />
                 </label>
-                <UserSelect name="vendedor" label="Vendedor" />
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-ink-secondary">Vendedor</span>
+                  <SelectOrNew name="vendedor" options={VENDEDORES} placeholder="Nombre del vendedor" />
+                </label>
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="text-ink-secondary">Aduana (opcional)</span>
                   <select name="aduana" className="rounded-lg border border-border px-3 py-2 text-sm">
@@ -175,7 +178,10 @@ export default async function VentasPage() {
           <Card className="lg:col-span-1">
             <CardHeader title="Registrar venta" />
             <form action={createSale} className="p-5 space-y-3">
-              <UserSelect name="vendedor" label="Vendedor" />
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Vendedor</span>
+                <SelectOrNew name="vendedor" options={VENDEDORES} placeholder="Nombre del vendedor" />
+              </label>
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-ink-secondary">Comprador / cliente</span>
                 <input name="comprador" className="rounded-lg border border-border px-3 py-2 text-sm" />
