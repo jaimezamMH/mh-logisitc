@@ -5,7 +5,7 @@ import { Card, CardHeader, StatusBadge, EmptyState, SerieTag, ClockBadge, MoneyI
 import UserSelect from "@/components/UserSelect";
 import SelectOrNew from "@/components/SelectOrNew";
 import BancoSelect from "@/components/BancoSelect";
-import { CostosSyncProvider, SyncedMoneyInput, SyncedTotal, type CostoCampo } from "@/components/CostosSync";
+import { CostosSyncProvider, SyncedMoneyInput, SyncedTotal, ViaticosFleteUSA, type CostoCampo } from "@/components/CostosSync";
 import ConfirmZeroCostButton from "@/components/ConfirmZeroCostButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import FotoEquipo from "@/components/FotoEquipo";
@@ -295,6 +295,9 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                      <ViaticosFleteUSA />
+                    </div>
                     <label className="flex flex-col gap-1 text-sm">
                       <span className="text-ink-secondary">Flete USA</span>
                       <SyncedMoneyInput campo="costoFleteUSA" />
