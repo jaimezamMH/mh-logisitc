@@ -24,7 +24,7 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
     { label: "Importación / Aduana", valor: order.costoImportacion },
     { label: "Maniobra/Reparación", valor: order.costoManiobras },
     { label: "Flete México", valor: order.costoFleteMx },
-    { label: "Permiso/Seguro", valor: order.costoPermiso },
+    { label: "Permiso/Seguro/Placas", valor: order.costoPermiso },
   ].filter((l) => l.valor > 0);
 
   return (
@@ -162,10 +162,18 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
           </div>
         )}
 
-        {(order.banco || order.numeroCuenta || order.clabe || order.titular) && (
+        {(order.monedaCuenta || order.banco || order.numeroCuenta || order.clabe || order.titular) && (
           <div className="mb-8 print:mb-4 text-sm border border-border rounded-lg p-4 print:p-3">
             <p className="text-xs uppercase tracking-wide text-ink-muted mb-2 font-semibold">Datos bancarios para el pago</p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+              {order.monedaCuenta && (
+                <p>
+                  <span className="text-ink-muted">Cuenta en: </span>
+                  <span className="text-ink-primary font-medium">
+                    {order.monedaCuenta === "USD" ? "Dólares (USD)" : "Pesos (MXN)"}
+                  </span>
+                </p>
+              )}
               {order.banco && (
                 <p>
                   <span className="text-ink-muted">Banco: </span>

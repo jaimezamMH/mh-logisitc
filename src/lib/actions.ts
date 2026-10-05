@@ -324,7 +324,7 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
     { campo: "costoImportacion", check: "incluirImportacion", label: "Importación / Aduana" },
     { campo: "costoManiobras", check: "incluirManiobras", label: "Maniobra/Reparación" },
     { campo: "costoFleteMx", check: "incluirFleteMx", label: "Flete México" },
-    { campo: "costoPermiso", check: "incluirPermiso", label: "Permiso/Seguro" },
+    { campo: "costoPermiso", check: "incluirPermiso", label: "Permiso/Seguro/Placas" },
   ] as const;
 
   const costosActualizados: Record<string, number> = usaGastosFleteUSA ? {} : { costoFleteUSA: montoFleteUSA };
@@ -387,6 +387,7 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
       total,
       tipoCambio: tipoCambio && tipoCambio > 0 ? tipoCambio : null,
       detalleFleteUSA,
+      monedaCuenta: str(formData, "monedaCuenta"),
       banco: str(formData, "banco"),
       direccionBanco: str(formData, "direccionBanco"),
       numeroCuenta: str(formData, "numeroCuenta"),

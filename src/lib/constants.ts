@@ -142,6 +142,35 @@ export const VENDEDORES = [
 // son varios gastos que se van sumando) — sugerencia, no lista cerrada.
 export const CONCEPTOS_GASTO_FLETE_USA = ["Viáticos", "Vuelos", "Gastos generales", "Comisión"] as const;
 
+// Bancos comunes para los datos bancarios de la orden de pago — sugerencia,
+// no lista cerrada (se puede agregar uno nuevo con el botón "+"). La lista
+// que se muestra depende de en qué moneda está la cuenta a pagar.
+export const BANCOS_MEXICO = [
+  "BBVA",
+  "Banorte",
+  "Santander",
+  "Citibanamex",
+  "HSBC",
+  "Scotiabank",
+  "Inbursa",
+  "Banco Azteca",
+  "Banregio",
+  "BanBajío",
+] as const;
+
+export const BANCOS_USA = [
+  "Chase",
+  "Bank of America",
+  "Wells Fargo",
+  "Citibank",
+  "U.S. Bank",
+  "PNC Bank",
+  "Truist Bank",
+  "Capital One",
+  "TD Bank",
+  "Goldman Sachs",
+] as const;
+
 // Datos de contacto de la empresa para la cotización impresa/PDF que se le
 // manda al cliente (tomados de la plantilla de cotización real de Jaime).
 export const CONTACTO_EMPRESA = {

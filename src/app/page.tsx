@@ -254,7 +254,7 @@ export default async function DashboardPage() {
               { label: "Importación", value: data.costosPorConcepto.importacion, icon: Landmark },
               { label: "Maniobra/Reparación", value: data.costosPorConcepto.maniobras, icon: Wrench },
               { label: "Flete México", value: data.costosPorConcepto.fleteMx, icon: Ship },
-              { label: "Permiso/Seguro", value: data.costosPorConcepto.permiso, icon: Signpost },
+              { label: "Permiso/Seguro/Placas", value: data.costosPorConcepto.permiso, icon: Signpost },
             ].map((c) => (
               <div key={c.label} className="rounded-lg border border-border p-3">
                 <c.icon size={16} className="text-brand-blue-600 mb-1.5" />

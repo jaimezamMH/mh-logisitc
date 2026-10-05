@@ -19,7 +19,7 @@ export default async function CotizacionPage({ params }: { params: Promise<{ id:
     { label: "Importación / Aduana", valor: c.costoImportacion },
     { label: "Maniobras", valor: c.costoManiobras },
     { label: "Flete México", valor: c.costoFleteMx },
-    { label: "Permiso/Seguro", valor: c.costoPermiso },
+    { label: "Permiso/Seguro/Placas", valor: c.costoPermiso },
   ].filter((l) => l.valor > 0);
 
   const subtotal = c.costoFleteUSA + c.costoImportacion + c.costoManiobras + c.costoFleteMx + c.costoPermiso;

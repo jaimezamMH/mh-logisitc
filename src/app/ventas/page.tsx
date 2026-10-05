@@ -14,7 +14,7 @@ const CONCEPTOS_SERVICIO = [
   { costo: "costoFleteUSA", precio: "precioFleteUSA", label: "Flete USA" },
   { costo: "costoImportacion", precio: "precioImportacion", label: "Importación / Aduana" },
   { costo: "costoFleteMx", precio: "precioFleteMx", label: "Flete México" },
-  { costo: "costoPermiso", precio: "precioPermiso", label: "Permiso/Seguro" },
+  { costo: "costoPermiso", precio: "precioPermiso", label: "Permiso/Seguro/Placas" },
 ] as const;
 
 export default async function VentasPage() {
@@ -47,7 +47,7 @@ export default async function VentasPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-1">
-              <CardHeader title="Vender servicio logístico" subtitle="Flete, importación o permiso/seguro suelto, sin equipo propio de MH" />
+              <CardHeader title="Vender servicio logístico" subtitle="Flete, importación o permiso/seguro/placas suelto, sin equipo propio de MH" />
               <form action={crearVentaServicio} className="p-5 space-y-3">
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="text-ink-secondary">Cliente</span>

@@ -101,7 +101,7 @@ export default async function CotizacionesPage() {
                   { key: "costoImportacion", label: "Importación" },
                   { key: "costoManiobras", label: "Maniobras" },
                   { key: "costoFleteMx", label: "Flete México" },
-                  { key: "costoPermiso", label: "Permiso/Seguro" },
+                  { key: "costoPermiso", label: "Permiso/Seguro/Placas" },
                 ].map((c) => (
                   <div key={c.key} className="grid grid-cols-[1fr_auto] gap-2 items-center">
                     <span className="text-sm text-ink-secondary">{c.label}</span>

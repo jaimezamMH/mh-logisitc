@@ -17,7 +17,7 @@ function CostosPorConcepto({ costos }: { costos: { fleteUSA: number; importacion
     { label: "Importación / Aduana", value: costos.importacion, icon: Landmark },
     { label: "Maniobra/Reparación", value: costos.maniobras, icon: Wrench },
     { label: "Flete México", value: costos.fleteMx, icon: Ship },
-    { label: "Permiso/Seguro", value: costos.permiso, icon: Signpost },
+    { label: "Permiso/Seguro/Placas", value: costos.permiso, icon: Signpost },
   ];
   return (
     <Card>
@@ -109,7 +109,7 @@ function CostoPromedio({
     { label: "Importación / Aduana", value: costos.importacion, icon: Landmark },
     { label: "Maniobra/Reparación", value: costos.maniobras, icon: Wrench },
     { label: "Flete México", value: costos.fleteMx, icon: Ship },
-    { label: "Permiso/Seguro", value: costos.permiso, icon: Signpost },
+    { label: "Permiso/Seguro/Placas", value: costos.permiso, icon: Signpost },
   ];
   return (
     <Card>

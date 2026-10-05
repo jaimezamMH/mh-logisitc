@@ -465,7 +465,7 @@ export async function getVentasServicioLogistico() {
       { label: "Flete USA", costo: s.costoFleteUSA, precio: s.precioFleteUSA },
       { label: "Importación / Aduana", costo: s.costoImportacion, precio: s.precioImportacion },
       { label: "Flete México", costo: s.costoFleteMx, precio: s.precioFleteMx },
-      { label: "Permiso/Seguro", costo: s.costoPermiso, precio: s.precioPermiso },
+      { label: "Permiso/Seguro/Placas", costo: s.costoPermiso, precio: s.precioPermiso },
     ].map((c) => ({ ...c, utilidad: c.precio - c.costo }));
 
     const totalCosto = conceptos.reduce((a, c) => a + c.costo, 0);

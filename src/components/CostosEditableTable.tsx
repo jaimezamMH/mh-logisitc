@@ -30,7 +30,7 @@ const CAMPOS: { key: keyof FilaCosto; label: string }[] = [
   { key: "costoImportacion", label: "Importación" },
   { key: "costoManiobras", label: "Maniobra/Reparación" },
   { key: "costoFleteMx", label: "Flete Mx" },
-  { key: "costoPermiso", label: "Permiso/Seguro" },
+  { key: "costoPermiso", label: "Permiso/Seguro/Placas" },
 ];
 
 export default function CostosEditableTable({ shipments }: { shipments: FilaCosto[] }) {
