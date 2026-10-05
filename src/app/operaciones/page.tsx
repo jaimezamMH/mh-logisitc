@@ -1,18 +1,22 @@
 import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import { Card, EmptyState, StatusBadge, SerieTag, ClockBadge } from "@/components/ui";
+import Buscador from "@/components/Buscador";
 import { getShipmentsBoard } from "@/lib/queries";
-import { ESTATUS_FLOW, formatFecha } from "@/lib/constants";
+import { ESTATUS_FLOW, formatFecha, coincideBusqueda } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
 export default async function OperacionesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ estatus?: string }>;
+  searchParams: Promise<{ estatus?: string; buscar?: string }>;
 }) {
-  const { estatus: filtro } = await searchParams;
-  const shipments = await getShipmentsBoard();
+  const { estatus: filtro, buscar } = await searchParams;
+  const todos = await getShipmentsBoard();
+  const shipments = buscar
+    ? todos.filter((s) => coincideBusqueda(buscar, [s.equipoDescripcion, s.cliente, s.serie, s.folio]))
+    : todos;
 
   const columnas = filtro
     ? ESTATUS_FLOW.filter((e) => e.key === filtro)
@@ -22,11 +26,16 @@ export default async function OperacionesPage({
     <>
       <TopBar title="Operaciones" subtitle="Tablero de estatus en tiempo real" />
       <main className="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-8">
-        {filtro && (
-          <Link href="/operaciones" className="inline-block mb-4 text-sm text-brand-blue-700 hover:underline">
-            ← Ver todas las etapas
-          </Link>
-        )}
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+          {filtro ? (
+            <Link href="/operaciones" className="text-sm text-brand-blue-700 hover:underline">
+              ← Ver todas las etapas
+            </Link>
+          ) : (
+            <span />
+          )}
+          <Buscador />
+        </div>
         <div className="flex gap-4 h-full min-h-[70vh]">
           {columnas.map((col) => {
             const items = shipments

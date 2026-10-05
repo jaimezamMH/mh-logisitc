@@ -5,6 +5,7 @@ import { Card, CardHeader, StatusBadge, EmptyState, SerieTag, ClockBadge, MoneyI
 import UserSelect from "@/components/UserSelect";
 import SelectOrNew from "@/components/SelectOrNew";
 import BancoSelect from "@/components/BancoSelect";
+import { CostosSyncProvider, SyncedMoneyInput, SyncedTotal, type CostoCampo } from "@/components/CostosSync";
 import ConfirmZeroCostButton from "@/components/ConfirmZeroCostButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import FotoEquipo from "@/components/FotoEquipo";
@@ -239,6 +240,15 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
           </Card>
 
           {/* Costos y orden de pago */}
+          <CostosSyncProvider
+            inicial={{
+              costoFleteUSA: String(shipment.costoFleteUSA),
+              costoImportacion: String(shipment.costoImportacion),
+              costoManiobras: String(shipment.costoManiobras),
+              costoFleteMx: String(shipment.costoFleteMx),
+              costoPermiso: String(shipment.costoPermiso),
+            }}
+          >
           <div className="space-y-6">
             <Card>
               <CardHeader
@@ -287,23 +297,23 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                   <div className="grid grid-cols-2 gap-4">
                     <label className="flex flex-col gap-1 text-sm">
                       <span className="text-ink-secondary">Flete USA</span>
-                      <MoneyInput name="costoFleteUSA" defaultValue={shipment.costoFleteUSA} />
+                      <SyncedMoneyInput campo="costoFleteUSA" />
                     </label>
                     <label className="flex flex-col gap-1 text-sm">
                       <span className="text-ink-secondary">Importación</span>
-                      <MoneyInput name="costoImportacion" defaultValue={shipment.costoImportacion} />
+                      <SyncedMoneyInput campo="costoImportacion" />
                     </label>
                     <label className="flex flex-col gap-1 text-sm">
                       <span className="text-ink-secondary">Maniobra/Reparación</span>
-                      <MoneyInput name="costoManiobras" defaultValue={shipment.costoManiobras} />
+                      <SyncedMoneyInput campo="costoManiobras" />
                     </label>
                     <label className="flex flex-col gap-1 text-sm">
                       <span className="text-ink-secondary">Flete México</span>
-                      <MoneyInput name="costoFleteMx" defaultValue={shipment.costoFleteMx} />
+                      <SyncedMoneyInput campo="costoFleteMx" />
                     </label>
                     <label className="flex flex-col gap-1 text-sm">
                       <span className="text-ink-secondary">Permiso/Seguro/Placas</span>
-                      <MoneyInput name="costoPermiso" defaultValue={shipment.costoPermiso} />
+                      <SyncedMoneyInput campo="costoPermiso" />
                     </label>
                     <label className="flex items-center gap-2 text-sm mt-5">
                       <input type="checkbox" name="fleteMexAplica" defaultChecked={shipment.fleteMexAplica} />
@@ -311,7 +321,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                     </label>
                     <div className="col-span-2 flex items-center justify-between pt-2 border-t border-border">
                       <span className="text-sm text-ink-secondary">Total</span>
-                      <span className="text-lg font-semibold text-ink-primary">{formatMXN(totalCostos)}</span>
+                      <SyncedTotal className="text-lg font-semibold text-ink-primary" />
                     </div>
                   </div>
                 )}
@@ -332,18 +342,21 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                 <form action={generarOrdenDePago.bind(null, shipment.id)} className="space-y-3">
                   <div className="space-y-1.5">
                     {[
-                      { check: "incluirFleteUSA", campo: "costoFleteUSA", label: "Flete USA", monto: shipment.costoFleteUSA },
-                      { check: "incluirImportacion", campo: "costoImportacion", label: "Importación / Aduana", monto: shipment.costoImportacion },
-                      { check: "incluirManiobras", campo: "costoManiobras", label: "Maniobra/Reparación", monto: shipment.costoManiobras },
-                      { check: "incluirFleteMx", campo: "costoFleteMx", label: "Flete México", monto: shipment.costoFleteMx },
-                      { check: "incluirPermiso", campo: "costoPermiso", label: "Permiso/Seguro/Placas", monto: shipment.costoPermiso },
+                      { check: "incluirFleteUSA", campo: "costoFleteUSA", label: "Flete USA" },
+                      { check: "incluirImportacion", campo: "costoImportacion", label: "Importación / Aduana" },
+                      { check: "incluirManiobras", campo: "costoManiobras", label: "Maniobra/Reparación" },
+                      { check: "incluirFleteMx", campo: "costoFleteMx", label: "Flete México" },
+                      { check: "incluirPermiso", campo: "costoPermiso", label: "Permiso/Seguro/Placas" },
                     ].map((c) => (
                       <label key={c.check} className="flex items-center justify-between gap-2 text-sm rounded-lg border border-border px-3 py-2">
                         <span className="flex items-center gap-2 text-ink-secondary shrink-0">
                           <input type="checkbox" name={c.check} defaultChecked />
                           {c.label}
                         </span>
-                        <MoneyInput name={c.campo} defaultValue={c.monto} className="w-28 rounded-md border border-border px-2 py-1 text-right text-sm" />
+                        <SyncedMoneyInput
+                          campo={c.campo as CostoCampo}
+                          className="w-28 rounded-md border border-border px-2 py-1 text-right text-sm"
+                        />
                       </label>
                     ))}
                   </div>
@@ -442,6 +455,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
               </div>
             </Card>
           </div>
+          </CostosSyncProvider>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

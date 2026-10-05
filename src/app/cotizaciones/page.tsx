@@ -5,9 +5,10 @@ import { Card, CardHeader, EmptyState, StatCard, MoneyInput } from "@/components
 import SelectOrNew from "@/components/SelectOrNew";
 import FotoInputNueva from "@/components/FotoInputNueva";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
+import Buscador from "@/components/Buscador";
 import { crearCotizacion, eliminarCotizacion, aceptarCotizacion, rechazarCotizacion } from "@/lib/actions";
 import { getCotizaciones } from "@/lib/queries";
-import { VENDEDORES, formatMXN, formatFecha } from "@/lib/constants";
+import { VENDEDORES, formatMXN, formatFecha, coincideBusqueda } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -36,8 +37,16 @@ function EstatusCotizacion({ estatus }: { estatus: string }) {
   );
 }
 
-export default async function CotizacionesPage() {
-  const cotizaciones = await getCotizaciones();
+export default async function CotizacionesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ buscar?: string }>;
+}) {
+  const { buscar } = await searchParams;
+  const cotizacionesTodas = await getCotizaciones();
+  const cotizaciones = buscar
+    ? cotizacionesTodas.filter((c) => coincideBusqueda(buscar, [c.cliente, c.tipoMaquina, c.folio, c.shipment?.folio]))
+    : cotizacionesTodas;
   const pendientes = cotizaciones.filter((c) => c.estatus === "Pendiente").length;
   const aceptadas = cotizaciones.filter((c) => c.estatus === "Aceptada").length;
 
@@ -126,7 +135,7 @@ export default async function CotizacionesPage() {
           </Card>
 
           <Card className="lg:col-span-2">
-            <CardHeader title="Historial de cotizaciones" />
+            <CardHeader title="Historial de cotizaciones" action={<Buscador />} />
             {cotizaciones.length === 0 ? (
               <EmptyState text="Todavía no se ha generado ninguna cotización." />
             ) : (

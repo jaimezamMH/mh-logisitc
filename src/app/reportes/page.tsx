@@ -4,8 +4,9 @@ import TopBar from "@/components/TopBar";
 import { Card, CardHeader, EmptyState, StatusBadge, SerieTag, ClockBadge } from "@/components/ui";
 import PrintButton from "@/components/PrintButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
+import Buscador from "@/components/Buscador";
 import { getReporteDiario, getReporteRango } from "@/lib/queries";
-import { formatFecha, formatMXN } from "@/lib/constants";
+import { formatFecha, formatMXN, coincideBusqueda } from "@/lib/constants";
 import { createComment, updateComment, deleteComment } from "@/lib/actions";
 
 const MAX_COMENTARIOS_POR_UNIDAD = 3;
@@ -257,9 +258,9 @@ function listaMeses(hoy: Date, cantidad = 18) {
 export default async function ReportesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ vista?: string; semana?: string; mes?: string }>;
+  searchParams: Promise<{ vista?: string; semana?: string; mes?: string; buscar?: string }>;
 }) {
-  const { vista = "diario", semana, mes } = await searchParams;
+  const { vista = "diario", semana, mes, buscar } = await searchParams;
   const hoy = new Date();
 
   const semanaInicio = semana ? startOfWeek(new Date(`${semana}T12:00:00Z`)) : startOfWeek(hoy);
@@ -412,12 +413,20 @@ export default async function ReportesPage({
               <CardHeader
                 title="Equipos en operación"
                 subtitle={`${diario.unidadesEnOperacion.length} unidad${diario.unidadesEnOperacion.length === 1 ? "" : "es"} activas por estatus`}
+                action={<Buscador />}
               />
-              {diario.unidadesEnOperacion.length === 0 ? (
-                <EmptyState text="No hay unidades en operación." />
-              ) : (
+              {(() => {
+                const unidadesFiltradas = buscar
+                  ? diario.unidadesEnOperacion.filter((s) =>
+                      coincideBusqueda(buscar, [s.equipoDescripcion, s.cliente, s.serie, s.folio])
+                    )
+                  : diario.unidadesEnOperacion;
+                if (unidadesFiltradas.length === 0) {
+                  return <EmptyState text="No hay unidades en operación." />;
+                }
+                return (
                 <ul className="divide-y divide-border">
-                  {diario.unidadesEnOperacion.map((s) => {
+                  {unidadesFiltradas.map((s) => {
                     const comentariosUnidad = diario.comentarios.filter((c) => c.shipmentId === s.id);
                     return (
                       <li key={s.id} className="px-5 py-3 space-y-2">
@@ -490,7 +499,8 @@ export default async function ReportesPage({
                     );
                   })}
                 </ul>
-              )}
+                );
+              })()}
             </Card>
 
             <Card>

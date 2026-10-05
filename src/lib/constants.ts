@@ -267,3 +267,18 @@ export function formatFecha(date: Date | string | null | undefined): string {
     year: "numeric",
   }).format(d);
 }
+
+// Buscador genérico (serie, cliente, equipo...): compara sin mayúsculas ni
+// acentos para que encuentre "mexico" aunque esté guardado "México".
+function normalizarBusqueda(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+export function coincideBusqueda(texto: string, campos: (string | null | undefined)[]): boolean {
+  const buscado = normalizarBusqueda(texto);
+  if (!buscado) return true;
+  return campos.some((c) => c && normalizarBusqueda(c).includes(buscado));
+}

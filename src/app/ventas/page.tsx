@@ -2,9 +2,10 @@ import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import { Card, CardHeader, EmptyState, Pill, SerieTag, ClockBadge, StatCard, StatusBadge } from "@/components/ui";
 import SelectOrNew from "@/components/SelectOrNew";
+import Buscador from "@/components/Buscador";
 import { createSale, crearVentaServicio } from "@/lib/actions";
 import { getVentas, getVentasPorVendedor, getVentasServicioLogistico } from "@/lib/queries";
-import { MESES, TIPOS_UNIDAD, formatFecha, formatMXN, ADUANAS, VENDEDORES } from "@/lib/constants";
+import { MESES, TIPOS_UNIDAD, formatFecha, formatMXN, ADUANAS, VENDEDORES, coincideBusqueda } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { Handshake, TrendingUp, Layers } from "lucide-react";
 
@@ -17,13 +18,29 @@ const CONCEPTOS_SERVICIO = [
   { costo: "costoPermiso", precio: "precioPermiso", label: "Permiso/Seguro/Placas" },
 ] as const;
 
-export default async function VentasPage() {
-  const [ventas, porVendedor, shipments, serviciosLogisticos] = await Promise.all([
+export default async function VentasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ buscar?: string }>;
+}) {
+  const { buscar } = await searchParams;
+  const [ventasTodas, porVendedor, shipments, serviciosLogisticosTodos] = await Promise.all([
     getVentas(),
     getVentasPorVendedor(),
     prisma.shipment.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
     getVentasServicioLogistico(),
   ]);
+
+  const ventas = buscar
+    ? ventasTodas.filter((v) =>
+        coincideBusqueda(buscar, [v.comprador, v.shipment?.equipoDescripcion, v.shipment?.serie, v.shipment?.folio])
+      )
+    : ventasTodas;
+  const serviciosLogisticos = buscar
+    ? serviciosLogisticosTodos.filter((v) =>
+        coincideBusqueda(buscar, [v.shipment.cliente, v.shipment.equipoDescripcion, v.shipment.serie, v.shipment.folio])
+      )
+    : serviciosLogisticosTodos;
 
   const utilidadAcumulada = serviciosLogisticos.reduce((a, v) => a + v.utilidadTotal, 0);
   const utilidadPromedio = serviciosLogisticos.length ? utilidadAcumulada / serviciosLogisticos.length : 0;
@@ -32,6 +49,9 @@ export default async function VentasPage() {
     <>
       <TopBar title="Ventas" subtitle="Registro de ventas de Jaime y Raúl" />
       <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+        <div className="flex justify-end">
+          <Buscador />
+        </div>
         {/* ------------------------------------------------------------- */}
         {/* Servicios logísticos vendidos a clientes externos (no equipo) */}
         {/* ------------------------------------------------------------- */}
