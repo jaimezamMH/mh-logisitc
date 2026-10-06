@@ -16,6 +16,26 @@ function endOfDay(d: Date) {
   return x;
 }
 
+// "Hoy" en hora LOCAL del servidor — a diferencia de startOfDay/endOfDay de
+// arriba (UTC, para fechas "solo día"), esto es para comparar contra
+// timestamps REALES (fechaGenerada de una orden, fecha de un StatusEvent/
+// Comment, fechaRecordatorio). Usar la versión UTC ahí era un bug real: el
+// servidor corre en hora de México (UTC-7/UTC-6), así que después de las
+// ~17-18h locales el día en UTC ya cambió al de mañana mientras localmente
+// sigue siendo "hoy" — con startOfDay/endOfDay (UTC) esas horas de la tarde
+// quedaban fuera del rango de "hoy" y los reportes/recordatorios del día
+// parecían vacíos aunque sí hubiera movimientos.
+function startOfLocalDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+function endOfLocalDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(23, 59, 59, 999);
+  return x;
+}
+
 type ConCostos = {
   costoFleteUSA: number;
   costoImportacion: number;
@@ -72,8 +92,8 @@ function agruparPorProveedor<T extends Record<string, unknown>>(
 
 export async function getAgendaHoy() {
   const today = new Date();
-  const todayStart = startOfDay(today);
-  const todayEnd = endOfDay(today);
+  const todayStart = startOfLocalDay(today);
+  const todayEnd = endOfLocalDay(today);
 
   const reuniones = await prisma.comment.findMany({
     where: {
@@ -93,8 +113,12 @@ export async function getAgendaHoy() {
 
 export async function getDashboardData() {
   const today = new Date();
+  // fechaSalidaProgramada es "solo día" (UTC); fechaRecordatorio es un
+  // timestamp real (hora local) — cada uno necesita su propio "hoy".
   const todayStart = startOfDay(today);
   const todayEnd = endOfDay(today);
+  const todayStartLocal = startOfLocalDay(today);
+  const todayEndLocal = endOfLocalDay(today);
 
   const [shipments, salidasHoy, recordatoriosHoy, comentariosAbiertos, ordenesPendientes] =
     await Promise.all([
@@ -106,7 +130,7 @@ export async function getDashboardData() {
         where: {
           tipo: "recordatorio",
           resuelto: false,
-          fechaRecordatorio: { gte: todayStart, lte: todayEnd },
+          fechaRecordatorio: { gte: todayStartLocal, lte: todayEndLocal },
         },
         include: { shipment: true },
         orderBy: { fechaRecordatorio: "asc" },
@@ -481,8 +505,10 @@ export async function getVentasServicioLogistico() {
 // ---------------------------------------------------------------------------
 
 export async function getReporteDiario(fecha: Date = new Date()) {
-  const from = startOfDay(fecha);
-  const to = endOfDay(fecha);
+  // eventos/ordenesGeneradas/comentarios son timestamps reales (no fechas
+  // "solo día"), así que "hoy" se calcula en hora local, no UTC.
+  const from = startOfLocalDay(fecha);
+  const to = endOfLocalDay(fecha);
 
   const [eventos, ordenesGeneradas, comentarios, unidadesEnOperacion] = await Promise.all([
     prisma.statusEvent.findMany({
@@ -516,7 +542,11 @@ export async function getReporteDiario(fecha: Date = new Date()) {
       e.shipment.costoPermiso,
     0
   );
-  const costosPorConcepto = costosPorConceptoDe(entregasHoy.map((e) => e.shipment));
+  // "Costo por concepto" se saca de las ÓRDENES DE PAGO generadas hoy (no de
+  // las unidades entregadas hoy) — así coincide con "Monto solicitado hoy" de
+  // arriba, que también es dinero de órdenes. PaymentOrder ya guarda el monto
+  // de cada concepto incluido en esa orden, así que se puede sumar directo.
+  const costosPorConcepto = costosPorConceptoDe(ordenesGeneradas);
 
   return {
     fecha,
@@ -555,7 +585,10 @@ export async function getReporteRango(from: Date, to: Date) {
     (a, s) => a + s.costoFleteUSA + s.costoImportacion + s.costoManiobras + s.costoFleteMx + s.costoPermiso,
     0
   );
-  const costosPorConcepto = costosPorConceptoDe(entregas);
+  // "Costo por concepto" se saca de las ÓRDENES DE PAGO generadas en el
+  // periodo (no de las unidades entregadas) — así coincide con "Monto total
+  // solicitado" de arriba, que también es dinero de órdenes.
+  const costosPorConcepto = costosPorConceptoDe(ordenes);
 
   // Pagos por proveedor — solo de los 2 conceptos que sí tienen proveedor
   // capturado en el sistema (Flete USA y el agente que hace la importación).
@@ -564,14 +597,16 @@ export async function getReporteRango(from: Date, to: Date) {
   const proveedoresFleteUSA = agruparPorProveedor(entregas, "provFleteUSA", "costoFleteUSA");
   const proveedoresAgenteAduanal = agruparPorProveedor(entregas, "provAgenteAduanal", "costoImportacion");
 
-  // Costo promedio por unidad entregada en el periodo, por concepto.
+  // Costo promedio por unidad ENTREGADA en el periodo, por concepto — este sí
+  // se queda basado en las unidades (no en las órdenes), es un dato distinto.
+  const costosPorConceptoEntregas = costosPorConceptoDe(entregas);
   const n = entregas.length || 1;
   const costoPromedioPorConcepto = {
-    fleteUSA: costosPorConcepto.fleteUSA / n,
-    importacion: costosPorConcepto.importacion / n,
-    maniobras: costosPorConcepto.maniobras / n,
-    fleteMx: costosPorConcepto.fleteMx / n,
-    permiso: costosPorConcepto.permiso / n,
+    fleteUSA: costosPorConceptoEntregas.fleteUSA / n,
+    importacion: costosPorConceptoEntregas.importacion / n,
+    maniobras: costosPorConceptoEntregas.maniobras / n,
+    fleteMx: costosPorConceptoEntregas.fleteMx / n,
+    permiso: costosPorConceptoEntregas.permiso / n,
   };
 
   // Ciclo promedio (días) de las unidades entregadas en este periodo.

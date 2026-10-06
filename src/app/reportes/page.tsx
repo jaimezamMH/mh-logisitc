@@ -22,7 +22,7 @@ function CostosPorConcepto({ costos }: { costos: { fleteUSA: number; importacion
   ];
   return (
     <Card>
-      <CardHeader title="Costo por concepto" />
+      <CardHeader title="Costo por concepto" subtitle="De las órdenes de pago generadas en este periodo" />
       <div className="p-5 grid grid-cols-2 sm:grid-cols-5 gap-4">
         {conceptos.map((c) => (
           <div key={c.label} className="rounded-lg border border-border p-3">
