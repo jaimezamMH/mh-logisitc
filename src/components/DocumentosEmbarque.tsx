@@ -31,9 +31,11 @@ export type DocumentoItem = {
 export default function DocumentosEmbarque({
   shipmentId,
   documentos,
+  soloLectura = false,
 }: {
   shipmentId: string;
   documentos: DocumentoItem[];
+  soloLectura?: boolean;
 }) {
   const [nombre, setNombre] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -90,41 +92,47 @@ export default function DocumentosEmbarque({
               </a>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-xs text-ink-muted">{formatFechaCorta(d.createdAt)}</span>
-                <form action={eliminarDocumento.bind(null, d.id, shipmentId)}>
-                  <ConfirmSubmitButton
-                    confirmText={`¿Eliminar "${d.nombre}"?`}
-                    className="text-ink-muted hover:text-red-600 flex items-center"
-                    title="Eliminar documento"
-                  >
-                    <X size={14} />
-                  </ConfirmSubmitButton>
-                </form>
+                {!soloLectura && (
+                  <form action={eliminarDocumento.bind(null, d.id, shipmentId)}>
+                    <ConfirmSubmitButton
+                      confirmText={`¿Eliminar "${d.nombre}"?`}
+                      className="text-ink-muted hover:text-red-600 flex items-center"
+                      title="Eliminar documento"
+                    >
+                      <X size={14} />
+                    </ConfirmSubmitButton>
+                  </form>
+                )}
               </div>
             </li>
           ))}
         </ul>
       )}
 
-      <div className="flex items-center gap-2">
-        <input
-          type="text"
-          placeholder="Nombre (ej. Factura, Pedimento)"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          className="flex-1 rounded-lg border border-border px-2.5 py-1.5 text-xs"
-        />
-        <input ref={inputRef} type="file" accept="application/pdf,image/*" onChange={onFile} className="hidden" />
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={pending}
-          className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-surface-muted flex items-center gap-1.5"
-        >
-          {pending ? <Loader2 size={14} className="animate-spin" /> : <Paperclip size={14} />}
-          {pending ? "Subiendo…" : "Subir"}
-        </button>
-      </div>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {!soloLectura && (
+        <>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Nombre (ej. Factura, Pedimento)"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              className="flex-1 rounded-lg border border-border px-2.5 py-1.5 text-xs"
+            />
+            <input ref={inputRef} type="file" accept="application/pdf,image/*" onChange={onFile} className="hidden" />
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={pending}
+              className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-surface-muted flex items-center gap-1.5"
+            >
+              {pending ? <Loader2 size={14} className="animate-spin" /> : <Paperclip size={14} />}
+              {pending ? "Subiendo…" : "Subir"}
+            </button>
+          </div>
+          {error && <p className="text-xs text-red-600">{error}</p>}
+        </>
+      )}
     </div>
   );
 }

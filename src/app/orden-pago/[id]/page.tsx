@@ -5,16 +5,17 @@ import { formatFecha, formatMXN, formatPesos } from "@/lib/constants";
 import PrintButton from "@/components/PrintButton";
 import { marcarOrdenPagada, cancelarOrdenDePago, eliminarOrdenDePago } from "@/lib/actions";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
+import { esSoloLectura } from "@/lib/auth-server";
 import { ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function OrdenPagoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const order = await prisma.paymentOrder.findUnique({
-    where: { id },
-    include: { shipment: true },
-  });
+  const [order, soloLectura] = await Promise.all([
+    prisma.paymentOrder.findUnique({ where: { id }, include: { shipment: true } }),
+    esSoloLectura(),
+  ]);
   if (!order) notFound();
 
   const s = order.shipment;
@@ -35,28 +36,32 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
           Volver a la unidad
         </Link>
         <div className="flex items-center gap-3">
-          {order.estatusPago === "Pendiente" && (
+          {!soloLectura && (
             <>
-              <form action={cancelarOrdenDePago.bind(null, order.id)}>
-                <button className="rounded-lg border border-border text-sm px-4 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200">
-                  Cancelar orden
-                </button>
-              </form>
-              <form action={marcarOrdenPagada.bind(null, order.id)}>
-                <button className="rounded-lg border border-border text-sm px-4 py-2 hover:bg-surface-muted">
-                  Marcar como pagada
-                </button>
+              {order.estatusPago === "Pendiente" && (
+                <>
+                  <form action={cancelarOrdenDePago.bind(null, order.id)}>
+                    <button className="rounded-lg border border-border text-sm px-4 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200">
+                      Cancelar orden
+                    </button>
+                  </form>
+                  <form action={marcarOrdenPagada.bind(null, order.id)}>
+                    <button className="rounded-lg border border-border text-sm px-4 py-2 hover:bg-surface-muted">
+                      Marcar como pagada
+                    </button>
+                  </form>
+                </>
+              )}
+              <form action={eliminarOrdenDePago.bind(null, order.id)}>
+                <ConfirmSubmitButton
+                  confirmText={`¿Eliminar la orden ${order.folio}? Esto no se puede deshacer.`}
+                  className="rounded-lg border border-border text-sm px-4 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                >
+                  Eliminar
+                </ConfirmSubmitButton>
               </form>
             </>
           )}
-          <form action={eliminarOrdenDePago.bind(null, order.id)}>
-            <ConfirmSubmitButton
-              confirmText={`¿Eliminar la orden ${order.folio}? Esto no se puede deshacer.`}
-              className="rounded-lg border border-border text-sm px-4 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-            >
-              Eliminar
-            </ConfirmSubmitButton>
-          </form>
           <PrintButton />
         </div>
       </div>

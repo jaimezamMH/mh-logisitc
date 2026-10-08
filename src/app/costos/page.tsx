@@ -6,6 +6,7 @@ import Buscador from "@/components/Buscador";
 import { prisma } from "@/lib/prisma";
 import { formatFecha, formatMXN, coincideBusqueda } from "@/lib/constants";
 import { cancelarOrdenDePago, eliminarOrdenDePago, marcarOrdenPagada } from "@/lib/actions";
+import { esSoloLectura } from "@/lib/auth-server";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import { AlertTriangle, FileClock, Layers } from "lucide-react";
 
@@ -53,6 +54,7 @@ export default async function CostosPage({
   const { ordenes: ordenesFiltroRaw, unidades: unidadesFiltroRaw, buscar } = await searchParams;
   const ordenesFiltro = ordenesFiltroRaw ?? "pendientes";
   const unidadesFiltro = unidadesFiltroRaw ?? "pendientes";
+  const soloLectura = await esSoloLectura();
 
   const [shipmentsTodos, ordenesTodas] = await Promise.all([
     prisma.shipment.findMany({
@@ -180,31 +182,33 @@ export default async function CostosPage({
                         </span>
                       </td>
                       <td className="px-5 py-2.5">
-                        <div className="flex items-center gap-3">
-                          {o.estatusPago === "Pendiente" && (
-                            <>
-                              <form action={marcarOrdenPagada.bind(null, o.id)}>
-                                <button className="text-xs text-gray-400 hover:text-brand-blue-700" title="Marcar como pagada">
-                                  Marcar pagada
-                                </button>
-                              </form>
-                              <form action={cancelarOrdenDePago.bind(null, o.id)}>
-                                <button className="text-xs text-gray-400 hover:text-red-600" title="Cancelar orden">
-                                  Cancelar
-                                </button>
-                              </form>
-                            </>
-                          )}
-                          <form action={eliminarOrdenDePago.bind(null, o.id)}>
-                            <ConfirmSubmitButton
-                              confirmText={`¿Eliminar la orden ${o.folio}? Esto no se puede deshacer.`}
-                              className="text-xs text-gray-400 hover:text-red-600"
-                              title="Eliminar orden"
-                            >
-                              Eliminar
-                            </ConfirmSubmitButton>
-                          </form>
-                        </div>
+                        {!soloLectura && (
+                          <div className="flex items-center gap-3">
+                            {o.estatusPago === "Pendiente" && (
+                              <>
+                                <form action={marcarOrdenPagada.bind(null, o.id)}>
+                                  <button className="text-xs text-gray-400 hover:text-brand-blue-700" title="Marcar como pagada">
+                                    Marcar pagada
+                                  </button>
+                                </form>
+                                <form action={cancelarOrdenDePago.bind(null, o.id)}>
+                                  <button className="text-xs text-gray-400 hover:text-red-600" title="Cancelar orden">
+                                    Cancelar
+                                  </button>
+                                </form>
+                              </>
+                            )}
+                            <form action={eliminarOrdenDePago.bind(null, o.id)}>
+                              <ConfirmSubmitButton
+                                confirmText={`¿Eliminar la orden ${o.folio}? Esto no se puede deshacer.`}
+                                className="text-xs text-gray-400 hover:text-red-600"
+                                title="Eliminar orden"
+                              >
+                                Eliminar
+                              </ConfirmSubmitButton>
+                            </form>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -236,6 +240,7 @@ export default async function CostosPage({
           ) : (
             <CostosEditableTable
               shipments={shipments.map((s) => ({ ...s, tieneGastosFleteUSA: s._count.gastosFleteUSA > 0 }))}
+              soloLectura={soloLectura}
             />
           )}
         </Card>

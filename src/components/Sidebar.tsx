@@ -13,6 +13,7 @@ import {
   Upload,
   Handshake,
   Building2,
+  Eye,
 } from "lucide-react";
 
 const NAV = [
@@ -27,9 +28,11 @@ const NAV = [
   { href: "/importar", label: "Importar datos", icon: Upload },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ soloLectura = false }: { soloLectura?: boolean }) {
   const pathname = usePathname();
   if (pathname === "/login") return null;
+
+  const items = soloLectura ? NAV.filter((item) => item.href !== "/importar") : NAV;
 
   return (
     <aside className="no-print hidden md:flex md:w-64 md:flex-col bg-brand-navy text-white shrink-0">
@@ -43,8 +46,15 @@ export default function Sidebar() {
         </div>
       </div>
 
+      {soloLectura && (
+        <div className="mx-3 mt-3 flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-2 text-xs text-white/80">
+          <Eye size={13} />
+          Solo lectura
+        </div>
+      )}
+
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {NAV.map((item) => {
+        {items.map((item) => {
           const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           const Icon = item.icon;
           return (

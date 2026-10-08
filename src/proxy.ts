@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE, AUTH_VALUE } from "@/lib/auth";
+import { AUTH_COOKIE, rolDesdeCookie } from "@/lib/auth";
+
+// Rutas que son solo para dar de alta/importar datos — no tiene sentido que
+// las vea alguien con acceso de solo lectura (Dirección), así que se bloquean
+// desde aquí en vez de dejar que carguen y truenen al enviar el formulario.
+const RUTAS_SOLO_ESCRITURA = ["/embarques/nuevo", "/importar"];
 
 export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -8,11 +13,17 @@ export function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const autenticado = req.cookies.get(AUTH_COOKIE)?.value === AUTH_VALUE;
-  if (!autenticado) {
+  const rol = rolDesdeCookie(req.cookies.get(AUTH_COOKIE)?.value);
+  if (!rol) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  if (rol === "view" && RUTAS_SOLO_ESCRITURA.some((r) => pathname.startsWith(r))) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 

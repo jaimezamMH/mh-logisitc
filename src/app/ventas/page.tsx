@@ -5,6 +5,7 @@ import SelectOrNew from "@/components/SelectOrNew";
 import Buscador from "@/components/Buscador";
 import { createSale, crearVentaServicio } from "@/lib/actions";
 import { getVentas, getVentasPorVendedor, getVentasServicioLogistico } from "@/lib/queries";
+import { esSoloLectura } from "@/lib/auth-server";
 import { MESES, TIPOS_UNIDAD, formatFecha, formatMXN, ADUANAS, VENDEDORES, coincideBusqueda } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { Handshake, TrendingUp, Layers } from "lucide-react";
@@ -24,11 +25,12 @@ export default async function VentasPage({
   searchParams: Promise<{ buscar?: string }>;
 }) {
   const { buscar } = await searchParams;
-  const [ventasTodas, porVendedor, shipments, serviciosLogisticosTodos] = await Promise.all([
+  const [ventasTodas, porVendedor, shipments, serviciosLogisticosTodos, soloLectura] = await Promise.all([
     getVentas(),
     getVentasPorVendedor(),
     prisma.shipment.findMany({ orderBy: { createdAt: "desc" }, take: 50 }),
     getVentasServicioLogistico(),
+    esSoloLectura(),
   ]);
 
   const ventas = buscar
@@ -66,6 +68,7 @@ export default async function VentasPage({
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {!soloLectura && (
             <Card className="lg:col-span-1">
               <CardHeader title="Vender servicio logístico" subtitle="Flete, importación o permiso/seguro/placas suelto, sin equipo propio de MH" />
               <form action={crearVentaServicio} className="p-5 space-y-3">
@@ -135,8 +138,9 @@ export default async function VentasPage({
                 </p>
               </form>
             </Card>
+            )}
 
-            <Card className="lg:col-span-2">
+            <Card className={soloLectura ? "lg:col-span-3" : "lg:col-span-2"}>
               <CardHeader title="Utilidad por servicio vendido" subtitle="Precio al cliente menos costo real, por concepto" />
               {serviciosLogisticos.length === 0 ? (
                 <EmptyState text="Aún no hay servicios logísticos registrados." />
@@ -195,6 +199,7 @@ export default async function VentasPage({
           Ventas de equipo (operación interna)
         </h2>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {!soloLectura && (
           <Card className="lg:col-span-1">
             <CardHeader title="Registrar venta" />
             <form action={createSale} className="p-5 space-y-3">
@@ -258,8 +263,9 @@ export default async function VentasPage({
               </button>
             </form>
           </Card>
+          )}
 
-          <Card className="lg:col-span-2">
+          <Card className={soloLectura ? "lg:col-span-3" : "lg:col-span-2"}>
             <CardHeader title="Ventas por persona" />
             <div className="p-5 grid grid-cols-2 sm:grid-cols-3 gap-4">
               {porVendedor.length === 0 ? (

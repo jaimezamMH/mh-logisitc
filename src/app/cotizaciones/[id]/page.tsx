@@ -6,12 +6,13 @@ import { formatFecha, formatMXN, CONTACTO_EMPRESA } from "@/lib/constants";
 import { eliminarCotizacion, aceptarCotizacion, rechazarCotizacion } from "@/lib/actions";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import PrintButton from "@/components/PrintButton";
+import { esSoloLectura } from "@/lib/auth-server";
 
 export const dynamic = "force-dynamic";
 
 export default async function CotizacionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const c = await getCotizacion(id);
+  const [c, soloLectura] = await Promise.all([getCotizacion(id), esSoloLectura()]);
   if (!c) notFound();
 
   const lineas = [
@@ -34,28 +35,32 @@ export default async function CotizacionPage({ params }: { params: Promise<{ id:
           Volver a cotizaciones
         </Link>
         <div className="flex items-center gap-3">
-          {c.estatus === "Pendiente" && (
+          {!soloLectura && (
             <>
-              <form action={rechazarCotizacion.bind(null, c.id)}>
-                <button className="rounded-lg border border-border text-sm px-4 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200">
-                  Marcar rechazada
-                </button>
-              </form>
-              <form action={aceptarCotizacion.bind(null, c.id)}>
-                <button className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2">
-                  Cliente aceptó — pasar a venta
-                </button>
+              {c.estatus === "Pendiente" && (
+                <>
+                  <form action={rechazarCotizacion.bind(null, c.id)}>
+                    <button className="rounded-lg border border-border text-sm px-4 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200">
+                      Marcar rechazada
+                    </button>
+                  </form>
+                  <form action={aceptarCotizacion.bind(null, c.id)}>
+                    <button className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2">
+                      Cliente aceptó — pasar a venta
+                    </button>
+                  </form>
+                </>
+              )}
+              <form action={eliminarCotizacion.bind(null, c.id)}>
+                <ConfirmSubmitButton
+                  confirmText={`¿Eliminar la cotización ${c.folio}? Esto no se puede deshacer.`}
+                  className="rounded-lg border border-border text-sm px-4 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                >
+                  Eliminar
+                </ConfirmSubmitButton>
               </form>
             </>
           )}
-          <form action={eliminarCotizacion.bind(null, c.id)}>
-            <ConfirmSubmitButton
-              confirmText={`¿Eliminar la cotización ${c.folio}? Esto no se puede deshacer.`}
-              className="rounded-lg border border-border text-sm px-4 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-            >
-              Eliminar
-            </ConfirmSubmitButton>
-          </form>
           <PrintButton />
         </div>
       </div>

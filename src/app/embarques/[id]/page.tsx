@@ -11,6 +11,7 @@ import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import FotoEquipo from "@/components/FotoEquipo";
 import DocumentosEmbarque from "@/components/DocumentosEmbarque";
 import { getShipment, getProveedores } from "@/lib/queries";
+import { esSoloLectura } from "@/lib/auth-server";
 import {
   updateShipmentEstatusForm,
   updateShipmentInfo,
@@ -35,7 +36,7 @@ function dateInputValue(d: Date | null | undefined) {
 
 export default async function EmbarqueDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [shipment, proveedores] = await Promise.all([getShipment(id), getProveedores()]);
+  const [shipment, proveedores, soloLectura] = await Promise.all([getShipment(id), getProveedores(), esSoloLectura()]);
   if (!shipment) notFound();
 
   const totalCostos =
@@ -60,7 +61,16 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
         <Card className="p-4 md:p-5">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="w-full md:w-64 shrink-0">
-              <FotoEquipo shipmentId={shipment.id} fotoUrl={shipment.fotoUrl} />
+              {soloLectura ? (
+                shipment.fotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={shipment.fotoUrl} alt="" className="w-full h-56 md:h-64 object-cover rounded-xl border border-border" />
+                ) : (
+                  <div className="w-full h-56 md:h-64 rounded-xl bg-gray-100 border border-border" />
+                )
+              ) : (
+                <FotoEquipo shipmentId={shipment.id} fotoUrl={shipment.fotoUrl} />
+              )}
             </div>
             <div className="flex-1 flex flex-col justify-between gap-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -85,16 +95,18 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                 </div>
                 <div className="flex items-center gap-2">
                   <StatusBadge estatus={shipment.estatus} />
-                  <form action={deleteShipment.bind(null, shipment.id)}>
-                    <ConfirmSubmitButton
-                      confirmText={`¿Eliminar la unidad "${shipment.equipoDescripcion}" (serie ${shipment.serie})? Esto no se puede deshacer.`}
-                      className="flex items-center gap-1.5 text-xs text-ink-muted hover:text-brand-orange-700 border border-border rounded-lg px-3 py-1.5"
-                      title="Eliminar unidad"
-                    >
-                      <Trash2 size={14} />
-                      Eliminar
-                    </ConfirmSubmitButton>
-                  </form>
+                  {!soloLectura && (
+                    <form action={deleteShipment.bind(null, shipment.id)}>
+                      <ConfirmSubmitButton
+                        confirmText={`¿Eliminar la unidad "${shipment.equipoDescripcion}" (serie ${shipment.serie})? Esto no se puede deshacer.`}
+                        className="flex items-center gap-1.5 text-xs text-ink-muted hover:text-brand-orange-700 border border-border rounded-lg px-3 py-1.5"
+                        title="Eliminar unidad"
+                      >
+                        <Trash2 size={14} />
+                        Eliminar
+                      </ConfirmSubmitButton>
+                    </form>
+                  )}
                 </div>
               </div>
             </div>
@@ -102,40 +114,71 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
         </Card>
 
         {/* Cambiar estatus */}
-        <Card>
-          <CardHeader title="Mover a la siguiente etapa" subtitle={info.descripcion} />
-          <form action={updateShipmentEstatusForm.bind(null, shipment.id)} className="p-5 space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {ESTATUS_FLOW.map((e) => (
-                <button
-                  key={e.key}
-                  type="submit"
-                  name="estatus"
-                  value={e.key}
-                  className={`rounded-lg px-3 py-2 text-xs font-medium border transition-colors ${
-                    e.key === shipment.estatus
-                      ? `${e.bg} ${e.text} border-transparent`
-                      : "border-border text-ink-secondary hover:bg-surface-muted"
-                  }`}
-                >
-                  {e.label}
-                </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <UserSelect name="usuario" label="Registrado por" />
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-ink-secondary">Comentario del cambio (opcional)</span>
-                <input name="comentario" className="rounded-lg border border-border px-3 py-2 text-sm" placeholder="Ej. Cruzó en Calexico" />
-              </label>
-            </div>
-          </form>
-        </Card>
+        {!soloLectura && (
+          <Card>
+            <CardHeader title="Mover a la siguiente etapa" subtitle={info.descripcion} />
+            <form action={updateShipmentEstatusForm.bind(null, shipment.id)} className="p-5 space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {ESTATUS_FLOW.map((e) => (
+                  <button
+                    key={e.key}
+                    type="submit"
+                    name="estatus"
+                    value={e.key}
+                    className={`rounded-lg px-3 py-2 text-xs font-medium border transition-colors ${
+                      e.key === shipment.estatus
+                        ? `${e.bg} ${e.text} border-transparent`
+                        : "border-border text-ink-secondary hover:bg-surface-muted"
+                    }`}
+                  >
+                    {e.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <UserSelect name="usuario" label="Registrado por" />
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-ink-secondary">Comentario del cambio (opcional)</span>
+                  <input name="comentario" className="rounded-lg border border-border px-3 py-2 text-sm" placeholder="Ej. Cruzó en Calexico" />
+                </label>
+              </div>
+            </form>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Información del embarque */}
           <Card>
             <CardHeader title="Información y ruta" />
+            {soloLectura ? (
+              <dl className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                {[
+                  ["Cliente", shipment.cliente],
+                  ["Serie", shipment.serie],
+                  ["Categoría", shipment.categoria],
+                  ["Tipo de unidad", shipment.tipoUnidad === "CAMION" ? "Camión" : shipment.tipoUnidad === "AMARILLO" ? "Amarilla (maquinaria)" : null],
+                  ["Vendedor", shipment.vendedor],
+                  ["Origen", shipment.origenCiudad],
+                  ["Aduana", shipment.aduana],
+                  ["Destino", shipment.destinoCiudad],
+                  ["Fecha de inicio", shipment.fechaInicio ? formatFecha(shipment.fechaInicio) : null],
+                  ["Salida programada", shipment.fechaSalidaProgramada ? formatFecha(shipment.fechaSalidaProgramada) : null],
+                  ["Fecha de cruce", shipment.fechaCruce ? formatFecha(shipment.fechaCruce) : null],
+                  ["Proveedor de compra", shipment.proveedorCompra],
+                  ["Proveedor flete USA", shipment.provFleteUSA],
+                  ["Agente aduanal", shipment.provAgenteAduanal],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-xs text-ink-muted">{label}</dt>
+                    <dd className="text-ink-primary">{value || "—"}</dd>
+                  </div>
+                ))}
+                <div className="sm:col-span-2">
+                  <dt className="text-xs text-ink-muted">Incidencias / notas</dt>
+                  <dd className="text-ink-primary whitespace-pre-wrap">{shipment.incidencias || "—"}</dd>
+                </div>
+              </dl>
+            ) : (
             <form action={updateShipmentInfo.bind(null, shipment.id)} className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <label className="flex flex-col gap-1 text-sm sm:col-span-2">
                 <span className="text-ink-secondary">Descripción</span>
@@ -238,16 +281,86 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                 </button>
               </div>
             </form>
+            )}
           </Card>
 
           <Card>
             <CardHeader title="Documentos" subtitle="Factura, pedimento, BL, etc. — quedan guardados aquí para consultarlos cuando se necesiten" />
             <div className="p-5">
-              <DocumentosEmbarque shipmentId={shipment.id} documentos={shipment.archivos} />
+              <DocumentosEmbarque shipmentId={shipment.id} documentos={shipment.archivos} soloLectura={soloLectura} />
             </div>
           </Card>
 
           {/* Costos y orden de pago */}
+          {soloLectura ? (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader
+                  title="Costos del embarque"
+                  subtitle={esServicio ? "Costo real vs. precio al cliente" : "Flete USA, importación, maniobras, flete Mx y permiso"}
+                />
+                <div className="p-5 space-y-2">
+                  {[
+                    { label: "Flete USA", costo: shipment.costoFleteUSA, precio: shipment.precioFleteUSA },
+                    { label: "Importación", costo: shipment.costoImportacion, precio: shipment.precioImportacion },
+                    ...(esServicio ? [] : [{ label: "Maniobra/Reparación", costo: shipment.costoManiobras, precio: 0 }]),
+                    { label: "Flete México", costo: shipment.costoFleteMx, precio: shipment.precioFleteMx },
+                    { label: "Permiso/Seguro/Placas", costo: shipment.costoPermiso, precio: shipment.precioPermiso },
+                  ].map((c) => (
+                    <div key={c.label} className="flex items-center justify-between text-sm">
+                      <span className="text-ink-secondary">{c.label}</span>
+                      <span className="text-ink-primary font-medium">
+                        {formatMXN(c.costo)}
+                        {esServicio && c.precio > 0 && <span className="text-ink-muted"> · cliente {formatMXN(c.precio)}</span>}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <span className="text-sm font-semibold text-ink-primary">Total</span>
+                    <span className="text-lg font-semibold text-ink-primary">
+                      {formatMXN(totalCostos)}
+                      {esServicio && (
+                        <span className={`ml-2 text-sm font-medium ${utilidadServicio >= 0 ? "text-brand-blue-700" : "text-red-600"}`}>
+                          (utilidad {formatMXN(utilidadServicio)})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </Card>
+
+              <Card>
+                <CardHeader title="Órdenes de pago" />
+                {shipment.paymentOrders.length === 0 ? (
+                  <EmptyState text="Sin órdenes de pago generadas." />
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {shipment.paymentOrders.map((o) => (
+                      <li key={o.id} className="px-5 py-3 flex items-center justify-between gap-3 text-sm">
+                        <div className="min-w-0">
+                          <Link href={`/orden-pago/${o.id}`} className="text-brand-blue-700 hover:underline block truncate">
+                            {o.folio} · {formatMXN(o.total)}
+                          </Link>
+                          <p className="text-xs text-ink-muted truncate">{o.concepto ?? "Todos los conceptos"}</p>
+                        </div>
+                        <span
+                          className={
+                            o.estatusPago === "Pagado"
+                              ? "text-brand-blue-700"
+                              : o.estatusPago === "Cancelada"
+                                ? "text-gray-400"
+                                : "text-brand-orange-700"
+                          }
+                        >
+                          {o.estatusPago}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            </div>
+          ) : (
           <CostosSyncProvider
             inicial={{
               costoFleteUSA: String(shipment.costoFleteUSA),
@@ -467,20 +580,23 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
             </Card>
           </div>
           </CostosSyncProvider>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Comentarios */}
           <Card>
             <CardHeader title="Comentarios" />
-            <form action={createComment} className="p-5 space-y-3 border-b border-border">
-              <input type="hidden" name="shipmentId" value={shipment.id} />
-              <textarea name="texto" required placeholder="Escribe un comentario…" className="w-full rounded-lg border border-border px-3 py-2 text-sm min-h-16" />
-              <div className="flex gap-3">
-                <input name="autor" placeholder="Tu nombre" className="flex-1 rounded-lg border border-border px-3 py-2 text-sm" />
-                <button className="rounded-lg bg-gray-900 text-white text-sm font-medium px-4 py-2">Agregar</button>
-              </div>
-            </form>
+            {!soloLectura && (
+              <form action={createComment} className="p-5 space-y-3 border-b border-border">
+                <input type="hidden" name="shipmentId" value={shipment.id} />
+                <textarea name="texto" required placeholder="Escribe un comentario…" className="w-full rounded-lg border border-border px-3 py-2 text-sm min-h-16" />
+                <div className="flex gap-3">
+                  <input name="autor" placeholder="Tu nombre" className="flex-1 rounded-lg border border-border px-3 py-2 text-sm" />
+                  <button className="rounded-lg bg-gray-900 text-white text-sm font-medium px-4 py-2">Agregar</button>
+                </div>
+              </form>
+            )}
             {shipment.comments.length === 0 ? (
               <EmptyState text="Sin comentarios todavía." />
             ) : (
@@ -493,7 +609,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                         {c.autor ?? "Sin autor"} · {formatFecha(c.createdAt)} {c.tipo === "recordatorio" && "· Recordatorio"}
                       </p>
                     </div>
-                    {!c.resuelto && c.tipo === "recordatorio" && (
+                    {!soloLectura && !c.resuelto && c.tipo === "recordatorio" && (
                       <form action={resolveComment.bind(null, c.id)}>
                         <button className="text-xs text-brand-blue-700 hover:underline shrink-0">Resolver</button>
                       </form>

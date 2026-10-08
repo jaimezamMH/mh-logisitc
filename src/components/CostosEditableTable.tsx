@@ -33,7 +33,13 @@ const CAMPOS: { key: keyof FilaCosto; label: string }[] = [
   { key: "costoPermiso", label: "Permiso/Seguro/Placas" },
 ];
 
-export default function CostosEditableTable({ shipments }: { shipments: FilaCosto[] }) {
+export default function CostosEditableTable({
+  shipments,
+  soloLectura = false,
+}: {
+  shipments: FilaCosto[];
+  soloLectura?: boolean;
+}) {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
@@ -134,7 +140,7 @@ export default function CostosEditableTable({ shipments }: { shipments: FilaCost
                 ))}
                 <td className="px-5 py-2.5 text-right font-semibold text-ink-primary">{formatMXN(total)}</td>
                 <td className="px-5 py-2.5 text-right">
-                  {editando ? (
+                  {soloLectura ? null : editando ? (
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         onClick={() => guardar(s)}

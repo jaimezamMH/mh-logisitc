@@ -2,9 +2,10 @@ import Link from "next/link";
 import { Plus, LogOut } from "lucide-react";
 import { TopBarUserBadge } from "@/components/UserSelect";
 import { logoutAction } from "@/lib/auth-actions";
+import { esSoloLectura } from "@/lib/auth-server";
 import BackButton from "@/components/BackButton";
 
-export default function TopBar({
+export default async function TopBar({
   title,
   subtitle,
   showBack,
@@ -13,6 +14,7 @@ export default function TopBar({
   subtitle?: string;
   showBack?: boolean;
 }) {
+  const soloLectura = await esSoloLectura();
   const hoy = new Intl.DateTimeFormat("es-MX", {
     weekday: "long",
     day: "2-digit",
@@ -40,13 +42,15 @@ export default function TopBar({
             <LogOut size={16} />
           </button>
         </form>
-        <Link
-          href="/embarques/nuevo"
-          className="flex items-center gap-1.5 rounded-lg bg-brand-blue-600 hover:bg-brand-blue-700 transition-colors text-white text-sm font-medium px-3.5 py-2"
-        >
-          <Plus size={16} />
-          Nueva unidad
-        </Link>
+        {!soloLectura && (
+          <Link
+            href="/embarques/nuevo"
+            className="flex items-center gap-1.5 rounded-lg bg-brand-blue-600 hover:bg-brand-blue-700 transition-colors text-white text-sm font-medium px-3.5 py-2"
+          >
+            <Plus size={16} />
+            Nueva unidad
+          </Link>
+        )}
       </div>
     </header>
   );

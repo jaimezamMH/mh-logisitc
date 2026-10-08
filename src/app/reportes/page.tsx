@@ -8,6 +8,7 @@ import Buscador from "@/components/Buscador";
 import { getReporteDiario, getReporteRango } from "@/lib/queries";
 import { formatFecha, formatMXN, coincideBusqueda } from "@/lib/constants";
 import { createComment, updateComment, deleteComment } from "@/lib/actions";
+import { esSoloLectura } from "@/lib/auth-server";
 
 const MAX_COMENTARIOS_POR_UNIDAD = 3;
 
@@ -295,6 +296,7 @@ export default async function ReportesPage({
   searchParams: Promise<{ vista?: string; semana?: string; mes?: string; buscar?: string }>;
 }) {
   const { vista = "diario", semana, mes, buscar } = await searchParams;
+  const soloLectura = await esSoloLectura();
   const hoy = new Date();
 
   const semanaInicio = semana ? startOfWeek(new Date(`${semana}T12:00:00Z`)) : startOfWeek(hoy);
@@ -513,51 +515,59 @@ export default async function ReportesPage({
 
                         {comentariosUnidad.length > 0 && (
                           <ul className="space-y-1.5">
-                            {comentariosUnidad.map((c) => (
-                              <li key={c.id} className="flex items-center gap-1.5">
-                                <form action={updateComment} className="flex-1 flex items-center gap-1.5">
-                                  <input type="hidden" name="id" value={c.id} />
-                                  <input
-                                    name="texto"
-                                    defaultValue={c.texto}
-                                    className="flex-1 min-w-0 text-xs text-ink-secondary bg-surface-muted rounded-lg px-2.5 py-1.5 border-0 focus:outline-none focus:ring-1 focus:ring-brand-blue-400"
-                                  />
-                                  <button className="no-print text-xs text-brand-blue-700 font-medium shrink-0 hover:underline">
-                                    Guardar
-                                  </button>
-                                </form>
-                                <form action={deleteComment.bind(null, c.id)} className="no-print shrink-0">
-                                  <ConfirmSubmitButton
-                                    confirmText="¿Eliminar este comentario?"
-                                    className="text-ink-muted hover:text-red-600 flex items-center"
-                                    title="Eliminar comentario"
-                                  >
-                                    <X size={14} />
-                                  </ConfirmSubmitButton>
-                                </form>
-                              </li>
-                            ))}
+                            {comentariosUnidad.map((c) =>
+                              soloLectura ? (
+                                <li key={c.id} className="text-xs text-ink-secondary bg-surface-muted rounded-lg px-2.5 py-1.5">
+                                  {c.texto}
+                                </li>
+                              ) : (
+                                <li key={c.id} className="flex items-center gap-1.5">
+                                  <form action={updateComment} className="flex-1 flex items-center gap-1.5">
+                                    <input type="hidden" name="id" value={c.id} />
+                                    <input
+                                      name="texto"
+                                      defaultValue={c.texto}
+                                      className="flex-1 min-w-0 text-xs text-ink-secondary bg-surface-muted rounded-lg px-2.5 py-1.5 border-0 focus:outline-none focus:ring-1 focus:ring-brand-blue-400"
+                                    />
+                                    <button className="no-print text-xs text-brand-blue-700 font-medium shrink-0 hover:underline">
+                                      Guardar
+                                    </button>
+                                  </form>
+                                  <form action={deleteComment.bind(null, c.id)} className="no-print shrink-0">
+                                    <ConfirmSubmitButton
+                                      confirmText="¿Eliminar este comentario?"
+                                      className="text-ink-muted hover:text-red-600 flex items-center"
+                                      title="Eliminar comentario"
+                                    >
+                                      <X size={14} />
+                                    </ConfirmSubmitButton>
+                                  </form>
+                                </li>
+                              )
+                            )}
                           </ul>
                         )}
 
-                        {comentariosUnidad.length < MAX_COMENTARIOS_POR_UNIDAD ? (
-                          <form action={createComment} className="no-print flex items-center gap-2">
-                            <input type="hidden" name="tipo" value="comentario" />
-                            <input type="hidden" name="shipmentId" value={s.id} />
-                            <input
-                              name="texto"
-                              required
-                              placeholder="Comentario de hoy sobre esta unidad..."
-                              className="flex-1 rounded-lg border border-border px-2.5 py-1.5 text-xs"
-                            />
-                            <button className="text-xs text-brand-blue-700 font-medium shrink-0 hover:underline">
-                              Agregar
-                            </button>
-                          </form>
-                        ) : (
-                          <p className="no-print text-xs text-ink-muted italic">
-                            Máximo {MAX_COMENTARIOS_POR_UNIDAD} comentarios por unidad — elimina alguno para agregar otro.
-                          </p>
+                        {!soloLectura && (
+                          comentariosUnidad.length < MAX_COMENTARIOS_POR_UNIDAD ? (
+                            <form action={createComment} className="no-print flex items-center gap-2">
+                              <input type="hidden" name="tipo" value="comentario" />
+                              <input type="hidden" name="shipmentId" value={s.id} />
+                              <input
+                                name="texto"
+                                required
+                                placeholder="Comentario de hoy sobre esta unidad..."
+                                className="flex-1 rounded-lg border border-border px-2.5 py-1.5 text-xs"
+                              />
+                              <button className="text-xs text-brand-blue-700 font-medium shrink-0 hover:underline">
+                                Agregar
+                              </button>
+                            </form>
+                          ) : (
+                            <p className="no-print text-xs text-ink-muted italic">
+                              Máximo {MAX_COMENTARIOS_POR_UNIDAD} comentarios por unidad — elimina alguno para agregar otro.
+                            </p>
+                          )
                         )}
                       </li>
                     );

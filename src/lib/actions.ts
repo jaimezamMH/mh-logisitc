@@ -3,6 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { esSoloLectura } from "@/lib/auth-server";
+
+// Barrera real de seguridad para el acceso de "solo lectura" (Dirección): el
+// botón ya se oculta en la UI, pero esto bloquea igual si alguien manda la
+// acción directo (devtools, etc.) — toda acción que modifique datos debe
+// llamar esto primero.
+async function requireFullAccess() {
+  if (await esSoloLectura()) {
+    throw new Error("Tu acceso es de solo lectura — no puedes hacer cambios.");
+  }
+}
 
 // Se basa en el folio más alto que exista (no en un conteo), para que no se
 // repita un folio si antes se borró alguna unidad u orden a la mitad.
@@ -52,6 +63,7 @@ function dateOrNull(fd: FormData, key: string): Date | null {
 // ---------------------------------------------------------------------------
 
 export async function createShipment(formData: FormData) {
+  await requireFullAccess();
   const folio = await nextFolio();
 
   const shipment = await prisma.shipment.create({
@@ -96,6 +108,7 @@ export async function createShipment(formData: FormData) {
 // su propio estatus y seguimiento, pero con tipoVenta = "Servicio Logístico"
 // y precios de venta por concepto (para calcular utilidad).
 export async function crearVentaServicio(formData: FormData) {
+  await requireFullAccess();
   const folio = await nextFolio();
 
   const shipment = await prisma.shipment.create({
@@ -143,6 +156,7 @@ export async function updateShipmentEstatus(
   usuario: string,
   comentario?: string
 ) {
+  await requireFullAccess();
   const current = await prisma.shipment.findUnique({ where: { id: shipmentId } });
   if (!current) throw new Error("Embarque no encontrado");
 
@@ -180,6 +194,7 @@ export async function updateShipmentEstatusForm(shipmentId: string, formData: Fo
 }
 
 export async function updateShipmentInfo(shipmentId: string, formData: FormData) {
+  await requireFullAccess();
   await prisma.shipment.update({
     where: { id: shipmentId },
     data: {
@@ -211,6 +226,7 @@ export async function updateShipmentInfo(shipmentId: string, formData: FormData)
 }
 
 export async function guardarFotoEquipo(shipmentId: string, dataUrl: string): Promise<void> {
+  await requireFullAccess();
   if (!dataUrl.startsWith("data:image/")) throw new Error("Imagen inválida");
   await prisma.shipment.update({
     where: { id: shipmentId },
@@ -223,6 +239,7 @@ export async function guardarFotoEquipo(shipmentId: string, dataUrl: string): Pr
 }
 
 export async function quitarFotoEquipo(shipmentId: string): Promise<void> {
+  await requireFullAccess();
   await prisma.shipment.update({
     where: { id: shipmentId },
     data: { fotoUrl: null },
@@ -237,6 +254,7 @@ export async function quitarFotoEquipo(shipmentId: string): Promise<void> {
 // guardan como data URL igual que la foto del equipo, así quedan disponibles
 // para consultarlos/descargarlos después sin depender de un servicio externo.
 export async function guardarDocumento(formData: FormData): Promise<void> {
+  await requireFullAccess();
   const shipmentId = str(formData, "shipmentId");
   const archivoUrl = str(formData, "archivoUrl");
   if (!shipmentId || !archivoUrl?.startsWith("data:")) throw new Error("Archivo inválido");
@@ -252,11 +270,13 @@ export async function guardarDocumento(formData: FormData): Promise<void> {
 }
 
 export async function eliminarDocumento(id: string, shipmentId: string): Promise<void> {
+  await requireFullAccess();
   await prisma.documento.delete({ where: { id } });
   revalidatePath(`/embarques/${shipmentId}`);
 }
 
 export async function updateShipmentCosts(shipmentId: string, formData: FormData): Promise<void> {
+  await requireFullAccess();
   const tienePrecios = formData.has("precioFleteUSA");
   // Si la unidad ya tiene Flete USA desglosado en gastos individuales
   // (viáticos, vuelos, comisión...), ese costo se administra SOLO desde ahí
@@ -292,6 +312,7 @@ export async function updateShipmentCosts(shipmentId: string, formData: FormData
 }
 
 export async function deleteShipment(shipmentId: string) {
+  await requireFullAccess();
   await prisma.shipment.delete({ where: { id: shipmentId } });
   revalidatePath("/");
   revalidatePath("/operaciones");
@@ -314,6 +335,7 @@ async function nextOrderFolio() {
 }
 
 export async function generarOrdenDePago(shipmentId: string, formData: FormData): Promise<void> {
+  await requireFullAccess();
   const generadaPor = str(formData, "generadaPor") ?? "Sin especificar";
   const notas = str(formData, "notas");
 
@@ -452,6 +474,7 @@ async function recalcularCostoFleteUSA(shipmentId: string) {
 }
 
 export async function agregarGastoFleteUSA(shipmentId: string, formData: FormData) {
+  await requireFullAccess();
   const concepto = str(formData, "concepto") ?? "Gasto";
   const monto = num(formData, "monto");
   const fecha = dateOrNull(formData, "fecha") ?? new Date();
@@ -466,6 +489,7 @@ export async function agregarGastoFleteUSA(shipmentId: string, formData: FormDat
 }
 
 export async function eliminarGastoFleteUSA(id: string) {
+  await requireFullAccess();
   const gasto = await prisma.gastoFleteUSA.delete({ where: { id } });
   await recalcularCostoFleteUSA(gasto.shipmentId);
 
@@ -474,6 +498,7 @@ export async function eliminarGastoFleteUSA(id: string) {
 }
 
 export async function marcarOrdenPagada(orderId: string): Promise<void> {
+  await requireFullAccess();
   await prisma.paymentOrder.update({
     where: { id: orderId },
     data: { estatusPago: "Pagado" },
@@ -483,6 +508,7 @@ export async function marcarOrdenPagada(orderId: string): Promise<void> {
 }
 
 export async function cancelarOrdenDePago(orderId: string): Promise<void> {
+  await requireFullAccess();
   await prisma.paymentOrder.update({
     where: { id: orderId },
     data: { estatusPago: "Cancelada" },
@@ -492,6 +518,7 @@ export async function cancelarOrdenDePago(orderId: string): Promise<void> {
 }
 
 export async function eliminarOrdenDePago(orderId: string): Promise<void> {
+  await requireFullAccess();
   const order = await prisma.paymentOrder.findUnique({ where: { id: orderId } });
   if (!order) return;
   await prisma.paymentOrder.delete({ where: { id: orderId } });
@@ -505,6 +532,7 @@ export async function eliminarOrdenDePago(orderId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function createSale(formData: FormData) {
+  await requireFullAccess();
   await prisma.sale.create({
     data: {
       vendedor: str(formData, "vendedor") ?? "Otro",
@@ -532,6 +560,7 @@ export async function createSale(formData: FormData) {
 // ---------------------------------------------------------------------------
 
 export async function createComment(formData: FormData) {
+  await requireFullAccess();
   await prisma.comment.create({
     data: {
       shipmentId: str(formData, "shipmentId") || null,
@@ -550,12 +579,14 @@ export async function createComment(formData: FormData) {
 }
 
 export async function resolveComment(id: string) {
+  await requireFullAccess();
   await prisma.comment.update({ where: { id }, data: { resuelto: true } });
   revalidatePath("/");
   revalidatePath("/reportes");
 }
 
 export async function updateComment(formData: FormData) {
+  await requireFullAccess();
   const id = str(formData, "id");
   if (!id) return;
   const comment = await prisma.comment.update({
@@ -570,6 +601,7 @@ export async function updateComment(formData: FormData) {
 }
 
 export async function deleteComment(id: string) {
+  await requireFullAccess();
   const comment = await prisma.comment.delete({ where: { id } });
   revalidatePath("/");
   revalidatePath("/reportes");
@@ -583,6 +615,7 @@ export async function deleteComment(id: string) {
 // ---------------------------------------------------------------------------
 
 export async function crearCotizacion(formData: FormData) {
+  await requireFullAccess();
   const folio = await nextCotizacionFolio();
 
   const cotizacion = await prisma.cotizacion.create({
@@ -609,12 +642,14 @@ export async function crearCotizacion(formData: FormData) {
 }
 
 export async function eliminarCotizacion(id: string) {
+  await requireFullAccess();
   await prisma.cotizacion.delete({ where: { id } });
   revalidatePath("/cotizaciones");
   redirect("/cotizaciones");
 }
 
 export async function rechazarCotizacion(id: string) {
+  await requireFullAccess();
   await prisma.cotizacion.update({ where: { id }, data: { estatus: "Rechazada" } });
   revalidatePath("/cotizaciones");
   revalidatePath(`/cotizaciones/${id}`);
@@ -624,6 +659,7 @@ export async function rechazarCotizacion(id: string) {
 // (Shipment) para heredar gratis todo el seguimiento de Operaciones/Costos,
 // igual que se hizo con "Servicio Logístico". Queda ligada por shipmentId.
 export async function aceptarCotizacion(id: string) {
+  await requireFullAccess();
   const cot = await prisma.cotizacion.findUnique({ where: { id } });
   if (!cot || cot.shipmentId) return;
 
@@ -695,6 +731,7 @@ export interface ImportShipmentRow {
 }
 
 export async function importShipments(rows: ImportShipmentRow[]) {
+  await requireFullAccess();
   const last = await prisma.shipment.findFirst({ orderBy: { folio: "desc" }, select: { folio: true } });
   let count = last ? parseInt(last.folio.split("-").pop() ?? "0", 10) || 0 : 0;
   let creados = 0;

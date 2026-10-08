@@ -7,16 +7,18 @@ import { getEventosCalendarioJaimeHoy, getEventosCalendarioRaulHoy, type EventoC
 import { formatMXN, formatHora } from "@/lib/constants";
 import { createComment, resolveComment } from "@/lib/actions";
 import { ESTATUS_FLOW } from "@/lib/constants";
+import { esSoloLectura } from "@/lib/auth-server";
 import { CalendarClock, CalendarDays } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [data, agenda, eventosGoogleJaime, eventosGoogleRaul] = await Promise.all([
+  const [data, agenda, eventosGoogleJaime, eventosGoogleRaul, soloLectura] = await Promise.all([
     getDashboardData(),
     getAgendaHoy(),
     getEventosCalendarioJaimeHoy(),
     getEventosCalendarioRaulHoy(),
+    esSoloLectura(),
   ]);
   const hoyTexto = new Intl.DateTimeFormat("es-MX", { weekday: "long", day: "2-digit", month: "long" }).format(new Date());
 
@@ -44,33 +46,35 @@ export default async function DashboardPage() {
         {/* Agenda de hoy: Jaime a la izquierda, Raúl a la derecha */}
         <Card>
           <CardHeader title="Agenda de hoy" subtitle={`Reuniones y pendientes de agenda · ${hoyTexto}`} />
-          <form action={createComment} className="p-5 border-b border-border grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] gap-2">
-            <input type="hidden" name="tipo" value="reunion" />
-            <input
-              name="texto"
-              required
-              placeholder="Asunto de la reunión"
-              className="rounded-lg border border-border px-3 py-2 text-sm"
-            />
-            <input
-              type="datetime-local"
-              name="fechaRecordatorio"
-              required
-              defaultValue={new Date().toISOString().slice(0, 16)}
-              className="rounded-lg border border-border px-3 py-2 text-sm"
-            />
-            <select name="autor" required defaultValue="" className="rounded-lg border border-border px-3 py-2 text-sm">
-              <option value="" disabled>
-                ¿Quién?
-              </option>
-              <option value="Jaime Zamudio">Jaime Zamudio</option>
-              <option value="Raúl Favela">Raúl Favela</option>
-            </select>
-            <button className="rounded-lg bg-brand-navy text-white text-sm font-medium px-4 py-2 hover:opacity-90 flex items-center justify-center gap-1.5">
-              <CalendarClock size={14} />
-              Agregar
-            </button>
-          </form>
+          {!soloLectura && (
+            <form action={createComment} className="p-5 border-b border-border grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] gap-2">
+              <input type="hidden" name="tipo" value="reunion" />
+              <input
+                name="texto"
+                required
+                placeholder="Asunto de la reunión"
+                className="rounded-lg border border-border px-3 py-2 text-sm"
+              />
+              <input
+                type="datetime-local"
+                name="fechaRecordatorio"
+                required
+                defaultValue={new Date().toISOString().slice(0, 16)}
+                className="rounded-lg border border-border px-3 py-2 text-sm"
+              />
+              <select name="autor" required defaultValue="" className="rounded-lg border border-border px-3 py-2 text-sm">
+                <option value="" disabled>
+                  ¿Quién?
+                </option>
+                <option value="Jaime Zamudio">Jaime Zamudio</option>
+                <option value="Raúl Favela">Raúl Favela</option>
+              </select>
+              <button className="rounded-lg bg-brand-navy text-white text-sm font-medium px-4 py-2 hover:opacity-90 flex items-center justify-center gap-1.5">
+                <CalendarClock size={14} />
+                Agregar
+              </button>
+            </form>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border">
             {columnas.map((col) => (
               <div key={col.nombre} className="p-5">
@@ -90,7 +94,7 @@ export default async function DashboardPage() {
                           )}
                           <span className="text-sm text-ink-primary">{item.texto}</span>
                         </div>
-                        {item.tipo === "manual" && (
+                        {!soloLectura && item.tipo === "manual" && (
                           <form action={resolveComment.bind(null, item.id)}>
                             <button className="text-xs text-ink-muted hover:text-brand-blue-700 shrink-0">Listo</button>
                           </form>
@@ -139,9 +143,11 @@ export default async function DashboardPage() {
                         </>
                       )}
                     </span>
-                    <form action={resolveComment.bind(null, r.id)}>
-                      <button className="text-xs text-brand-orange-700 hover:underline shrink-0">Listo</button>
-                    </form>
+                    {!soloLectura && (
+                      <form action={resolveComment.bind(null, r.id)}>
+                        <button className="text-xs text-brand-orange-700 hover:underline shrink-0">Listo</button>
+                      </form>
+                    )}
                   </div>
                 ))}
               </div>
@@ -267,7 +273,7 @@ export default async function DashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Tablero por estatus */}
-          <Card className="lg:col-span-2">
+          <Card className={soloLectura ? "lg:col-span-3" : "lg:col-span-2"}>
             <CardHeader title="Operaciones por etapa" subtitle="Estatus en tiempo real de todas las unidades" />
             <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
               {ESTATUS_FLOW.filter((e) => e.key !== "Cancelado").map((e) => (
@@ -284,32 +290,34 @@ export default async function DashboardPage() {
           </Card>
 
           {/* Recordatorio rápido */}
-          <Card>
-            <CardHeader title="Agregar recordatorio" subtitle="Para el dashboard de hoy" />
-            <form action={createComment} className="p-5 space-y-3">
-              <input type="hidden" name="tipo" value="recordatorio" />
-              <textarea
-                name="texto"
-                required
-                placeholder="Ej. Confirmar cruce de la grúa 1783 en Calexico"
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm min-h-20"
-              />
-              <input
-                type="datetime-local"
-                name="fechaRecordatorio"
-                defaultValue={new Date().toISOString().slice(0, 16)}
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm"
-              />
-              <input
-                name="autor"
-                placeholder="Tu nombre"
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm"
-              />
-              <button className="w-full rounded-lg bg-brand-navy text-white text-sm font-medium py-2 hover:opacity-90">
-                Guardar recordatorio
-              </button>
-            </form>
-          </Card>
+          {!soloLectura && (
+            <Card>
+              <CardHeader title="Agregar recordatorio" subtitle="Para el dashboard de hoy" />
+              <form action={createComment} className="p-5 space-y-3">
+                <input type="hidden" name="tipo" value="recordatorio" />
+                <textarea
+                  name="texto"
+                  required
+                  placeholder="Ej. Confirmar cruce de la grúa 1783 en Calexico"
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm min-h-20"
+                />
+                <input
+                  type="datetime-local"
+                  name="fechaRecordatorio"
+                  defaultValue={new Date().toISOString().slice(0, 16)}
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                />
+                <input
+                  name="autor"
+                  placeholder="Tu nombre"
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"
+                />
+                <button className="w-full rounded-lg bg-brand-navy text-white text-sm font-medium py-2 hover:opacity-90">
+                  Guardar recordatorio
+                </button>
+              </form>
+            </Card>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -368,9 +376,11 @@ export default async function DashboardPage() {
                         {c.autor ?? "Sin autor"} {c.shipment ? `· ${c.shipment.folio}` : ""}
                       </p>
                     </div>
-                    <form action={resolveComment.bind(null, c.id)}>
-                      <button className="text-xs text-brand-blue-700 hover:underline shrink-0">Resolver</button>
-                    </form>
+                    {!soloLectura && (
+                      <form action={resolveComment.bind(null, c.id)}>
+                        <button className="text-xs text-brand-blue-700 hover:underline shrink-0">Resolver</button>
+                      </form>
+                    )}
                   </li>
                 ))}
               </ul>

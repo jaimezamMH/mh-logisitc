@@ -8,6 +8,7 @@ import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Buscador from "@/components/Buscador";
 import { crearCotizacion, eliminarCotizacion, aceptarCotizacion, rechazarCotizacion } from "@/lib/actions";
 import { getCotizaciones } from "@/lib/queries";
+import { esSoloLectura } from "@/lib/auth-server";
 import { VENDEDORES, formatMXN, formatFecha, coincideBusqueda } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +44,7 @@ export default async function CotizacionesPage({
   searchParams: Promise<{ buscar?: string }>;
 }) {
   const { buscar } = await searchParams;
-  const cotizacionesTodas = await getCotizaciones();
+  const [cotizacionesTodas, soloLectura] = await Promise.all([getCotizaciones(), esSoloLectura()]);
   const cotizaciones = buscar
     ? cotizacionesTodas.filter((c) => coincideBusqueda(buscar, [c.cliente, c.tipoMaquina, c.folio, c.shipment?.folio]))
     : cotizacionesTodas;
@@ -61,6 +62,7 @@ export default async function CotizacionesPage({
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {!soloLectura && (
           <Card className="lg:col-span-1">
             <CardHeader title="Nueva cotización" subtitle="Se genera lista para imprimir o mandar en PDF" />
             <form action={crearCotizacion} className="p-5 space-y-3">
@@ -133,8 +135,9 @@ export default async function CotizacionesPage({
               </button>
             </form>
           </Card>
+          )}
 
-          <Card className="lg:col-span-2">
+          <Card className={soloLectura ? "lg:col-span-3" : "lg:col-span-2"}>
             <CardHeader title="Historial de cotizaciones" action={<Buscador />} />
             {cotizaciones.length === 0 ? (
               <EmptyState text="Todavía no se ha generado ninguna cotización." />
@@ -159,24 +162,28 @@ export default async function CotizacionesPage({
                     <div className="flex items-center gap-3 shrink-0">
                       <span className="text-sm font-semibold text-ink-primary">{formatMXN(totalCotizacion(c))}</span>
                       <EstatusCotizacion estatus={c.estatus} />
-                      {c.estatus === "Pendiente" && (
+                      {!soloLectura && (
                         <>
-                          <form action={aceptarCotizacion.bind(null, c.id)}>
-                            <button className="text-xs text-green-700 hover:underline">Aceptada</button>
-                          </form>
-                          <form action={rechazarCotizacion.bind(null, c.id)}>
-                            <button className="text-xs text-ink-muted hover:text-red-600 hover:underline">Rechazada</button>
+                          {c.estatus === "Pendiente" && (
+                            <>
+                              <form action={aceptarCotizacion.bind(null, c.id)}>
+                                <button className="text-xs text-green-700 hover:underline">Aceptada</button>
+                              </form>
+                              <form action={rechazarCotizacion.bind(null, c.id)}>
+                                <button className="text-xs text-ink-muted hover:text-red-600 hover:underline">Rechazada</button>
+                              </form>
+                            </>
+                          )}
+                          <form action={eliminarCotizacion.bind(null, c.id)}>
+                            <ConfirmSubmitButton
+                              confirmText={`¿Eliminar la cotización ${c.folio}? Esto no se puede deshacer.`}
+                              className="text-xs text-ink-muted hover:text-red-600 hover:underline"
+                            >
+                              Eliminar
+                            </ConfirmSubmitButton>
                           </form>
                         </>
                       )}
-                      <form action={eliminarCotizacion.bind(null, c.id)}>
-                        <ConfirmSubmitButton
-                          confirmText={`¿Eliminar la cotización ${c.folio}? Esto no se puede deshacer.`}
-                          className="text-xs text-ink-muted hover:text-red-600 hover:underline"
-                        >
-                          Eliminar
-                        </ConfirmSubmitButton>
-                      </form>
                     </div>
                   </li>
                 ))}
