@@ -210,6 +210,7 @@ export async function getShipment(id: string) {
       paymentOrders: { orderBy: { fechaGenerada: "desc" } },
       sales: true,
       gastosFleteUSA: { orderBy: { fecha: "desc" } },
+      archivos: { orderBy: { createdAt: "desc" } },
     },
   });
 }
@@ -585,10 +586,20 @@ export async function getReporteRango(from: Date, to: Date) {
     (a, s) => a + s.costoFleteUSA + s.costoImportacion + s.costoManiobras + s.costoFleteMx + s.costoPermiso,
     0
   );
+
+  // Costo promedio por unidad ENTREGADA en el periodo, por concepto — este sí
+  // se queda basado en las unidades (no en las órdenes), es un dato distinto.
+  const costosPorConceptoEntregas = costosPorConceptoDe(entregas);
+
   // "Costo por concepto" se saca de las ÓRDENES DE PAGO generadas en el
   // periodo (no de las unidades entregadas) — así coincide con "Monto total
-  // solicitado" de arriba, que también es dinero de órdenes.
-  const costosPorConcepto = costosPorConceptoDe(ordenes);
+  // solicitado" de arriba, que también es dinero de órdenes. PERO los meses
+  // históricos (sembrados del PDF) nunca generaron una orden de pago dentro
+  // de la app — solo tienen los 5 campos de costo directo en el Shipment —
+  // así que si el periodo no tiene NINGUNA orden, se usa el costo de las
+  // unidades entregadas como respaldo para no mostrar todo en $0.
+  const costosPorConcepto = ordenes.length > 0 ? costosPorConceptoDe(ordenes) : costosPorConceptoEntregas;
+  const costosPorConceptoFuente: "ordenes" | "entregas" = ordenes.length > 0 ? "ordenes" : "entregas";
 
   // Pagos por proveedor — solo de los 2 conceptos que sí tienen proveedor
   // capturado en el sistema (Flete USA y el agente que hace la importación).
@@ -596,10 +607,6 @@ export async function getReporteRango(from: Date, to: Date) {
   // proveedor propio en el modelo de datos, por eso no se desglosan aquí.
   const proveedoresFleteUSA = agruparPorProveedor(entregas, "provFleteUSA", "costoFleteUSA");
   const proveedoresAgenteAduanal = agruparPorProveedor(entregas, "provAgenteAduanal", "costoImportacion");
-
-  // Costo promedio por unidad ENTREGADA en el periodo, por concepto — este sí
-  // se queda basado en las unidades (no en las órdenes), es un dato distinto.
-  const costosPorConceptoEntregas = costosPorConceptoDe(entregas);
   const n = entregas.length || 1;
   const costoPromedioPorConcepto = {
     fleteUSA: costosPorConceptoEntregas.fleteUSA / n,
@@ -642,6 +649,7 @@ export async function getReporteRango(from: Date, to: Date) {
     totalPagado,
     costoTotalUSD,
     costosPorConcepto,
+    costosPorConceptoFuente,
     proveedoresFleteUSA,
     proveedoresAgenteAduanal,
     costoPromedioPorConcepto,

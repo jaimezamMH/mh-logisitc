@@ -233,6 +233,29 @@ export async function quitarFotoEquipo(shipmentId: string): Promise<void> {
   revalidatePath("/costos");
 }
 
+// Documentos adjuntos a la unidad (facturas, pedimentos, BL, etc.) — se
+// guardan como data URL igual que la foto del equipo, así quedan disponibles
+// para consultarlos/descargarlos después sin depender de un servicio externo.
+export async function guardarDocumento(formData: FormData): Promise<void> {
+  const shipmentId = str(formData, "shipmentId");
+  const archivoUrl = str(formData, "archivoUrl");
+  if (!shipmentId || !archivoUrl?.startsWith("data:")) throw new Error("Archivo inválido");
+  await prisma.documento.create({
+    data: {
+      shipmentId,
+      nombre: str(formData, "nombre") ?? "Documento",
+      archivoUrl,
+      tipo: str(formData, "tipo"),
+    },
+  });
+  revalidatePath(`/embarques/${shipmentId}`);
+}
+
+export async function eliminarDocumento(id: string, shipmentId: string): Promise<void> {
+  await prisma.documento.delete({ where: { id } });
+  revalidatePath(`/embarques/${shipmentId}`);
+}
+
 export async function updateShipmentCosts(shipmentId: string, formData: FormData): Promise<void> {
   const tienePrecios = formData.has("precioFleteUSA");
   // Si la unidad ya tiene Flete USA desglosado en gastos individuales

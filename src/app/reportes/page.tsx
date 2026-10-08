@@ -11,7 +11,13 @@ import { createComment, updateComment, deleteComment } from "@/lib/actions";
 
 const MAX_COMENTARIOS_POR_UNIDAD = 3;
 
-function CostosPorConcepto({ costos }: { costos: { fleteUSA: number; importacion: number; maniobras: number; fleteMx: number; permiso: number } }) {
+function CostosPorConcepto({
+  costos,
+  fuente = "ordenes",
+}: {
+  costos: { fleteUSA: number; importacion: number; maniobras: number; fleteMx: number; permiso: number };
+  fuente?: "ordenes" | "entregas";
+}) {
   const total = costos.fleteUSA + costos.importacion + costos.maniobras + costos.fleteMx + costos.permiso;
   const conceptos = [
     { label: "Flete USA", value: costos.fleteUSA, icon: Truck },
@@ -22,7 +28,14 @@ function CostosPorConcepto({ costos }: { costos: { fleteUSA: number; importacion
   ];
   return (
     <Card>
-      <CardHeader title="Costo por concepto" subtitle="De las órdenes de pago generadas en este periodo" />
+      <CardHeader
+        title="Costo por concepto"
+        subtitle={
+          fuente === "ordenes"
+            ? "De las órdenes de pago generadas en este periodo"
+            : "De las unidades entregadas en este periodo (no hay órdenes de pago capturadas en la app para este periodo)"
+        }
+      />
       <div className="p-5 grid grid-cols-2 sm:grid-cols-5 gap-4">
         {conceptos.map((c) => (
           <div key={c.label} className="rounded-lg border border-border p-3">
@@ -126,6 +139,27 @@ function CostoPromedio({
       </div>
     </Card>
   );
+}
+
+// Explicación corta y determinística (no IA) de qué pasó hoy con una unidad:
+// si tuvo movimiento(s) de estatus hoy, resume de dónde a dónde; si no, confirma
+// que sigue igual (para que el reporte diario diga algo de cada unidad, no solo
+// de las que se movieron).
+function analisisMovimientoHoy(
+  estatusActual: string,
+  eventosHoy: { estatusAnterior: string | null; estatusNuevo: string }[]
+) {
+  if (eventosHoy.length === 0) {
+    return `Sigue en ${estatusActual}, sin cambios hoy.`;
+  }
+  const primero = eventosHoy[0];
+  const ultimo = eventosHoy[eventosHoy.length - 1];
+  if (eventosHoy.length === 1) {
+    if (!primero.estatusAnterior) return `Se dio de alta hoy, estatus inicial ${primero.estatusNuevo}.`;
+    return `Hoy avanzó de ${primero.estatusAnterior} a ${primero.estatusNuevo}.`;
+  }
+  const inicial = primero.estatusAnterior ?? primero.estatusNuevo;
+  return `Hoy avanzó de ${inicial} a ${ultimo.estatusNuevo} (${eventosHoy.length} movimientos en el día).`;
 }
 
 function analisisCiclo(etapasPromedio: { estatus: string; promedioDias: number; n: number }[], cicloPromedioDias: number | null) {
@@ -389,18 +423,30 @@ export default async function ReportesPage({
                 <ul className="divide-y divide-border">
                   {diario.eventos.map((e) => (
                     <li key={e.id} className="px-5 py-3 flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm text-ink-primary flex items-center gap-2 flex-wrap">
-                          <span>
-                            {e.shipment.equipoDescripcion} — {e.shipment.cliente}
-                            {e.shipment.vendedor && <span className="text-ink-muted"> ({e.shipment.vendedor})</span>}
-                          </span>
-                          <SerieTag serie={e.shipment.serie} />
-                        </p>
-                        <p className="text-xs text-ink-muted">
-                          {e.estatusAnterior ? `${e.estatusAnterior} → ` : ""}
-                          {e.estatusNuevo} · {e.usuario ?? "Sistema"}
-                        </p>
+                      <div className="flex items-center gap-3 min-w-0">
+                        {e.shipment.fotoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={e.shipment.fotoUrl}
+                            alt=""
+                            className="w-11 h-11 rounded-md object-cover shrink-0 border border-border"
+                          />
+                        ) : (
+                          <div className="w-11 h-11 rounded-md bg-gray-100 shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm text-ink-primary flex items-center gap-2 flex-wrap">
+                            <span>
+                              {e.shipment.equipoDescripcion} — {e.shipment.cliente}
+                              {e.shipment.vendedor && <span className="text-ink-muted"> ({e.shipment.vendedor})</span>}
+                            </span>
+                            <SerieTag serie={e.shipment.serie} />
+                          </p>
+                          <p className="text-xs text-ink-muted">
+                            {e.estatusAnterior ? `${e.estatusAnterior} → ` : ""}
+                            {e.estatusNuevo} · {e.usuario ?? "Sistema"}
+                          </p>
+                        </div>
                       </div>
                       <StatusBadge estatus={e.estatusNuevo} />
                     </li>
@@ -428,24 +474,42 @@ export default async function ReportesPage({
                 <ul className="divide-y divide-border">
                   {unidadesFiltradas.map((s) => {
                     const comentariosUnidad = diario.comentarios.filter((c) => c.shipmentId === s.id);
+                    const eventosUnidadHoy = diario.eventos.filter((e) => e.shipmentId === s.id);
                     return (
                       <li key={s.id} className="px-5 py-3 space-y-2">
                         <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-sm text-ink-primary flex items-center gap-2 flex-wrap">
-                              <span>
-                                {s.equipoDescripcion} — {s.cliente}
-                                {s.vendedor && <span className="text-ink-muted"> ({s.vendedor})</span>}
-                              </span>
-                              <SerieTag serie={s.serie} />
-                            </p>
-                            <p className="text-xs text-ink-muted flex items-center gap-2">
-                              <span>{s.folio}</span>
-                              <ClockBadge fechaInicio={s.fechaInicio} fechaEntrega={s.fechaEntrega} tiempoCicloDias={s.tiempoCicloDias} />
-                            </p>
+                          <div className="flex items-center gap-3 min-w-0">
+                            {s.fotoUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={s.fotoUrl}
+                                alt=""
+                                className="w-11 h-11 rounded-md object-cover shrink-0 border border-border"
+                              />
+                            ) : (
+                              <div className="w-11 h-11 rounded-md bg-gray-100 shrink-0" />
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-sm text-ink-primary flex items-center gap-2 flex-wrap">
+                                <span>
+                                  {s.equipoDescripcion} — {s.cliente}
+                                  {s.vendedor && <span className="text-ink-muted"> ({s.vendedor})</span>}
+                                </span>
+                                <SerieTag serie={s.serie} />
+                              </p>
+                              <p className="text-xs text-ink-muted flex items-center gap-2 flex-wrap">
+                                <span>{s.folio}</span>
+                                {s.aduana && <span>· Aduana: {s.aduana}</span>}
+                                <ClockBadge fechaInicio={s.fechaInicio} fechaEntrega={s.fechaEntrega} tiempoCicloDias={s.tiempoCicloDias} />
+                              </p>
+                            </div>
                           </div>
                           <StatusBadge estatus={s.estatus} />
                         </div>
+
+                        <p className="text-xs text-ink-secondary italic">
+                          {analisisMovimientoHoy(s.estatus, eventosUnidadHoy)}
+                        </p>
 
                         {comentariosUnidad.length > 0 && (
                           <ul className="space-y-1.5">
@@ -556,7 +620,7 @@ export default async function ReportesPage({
               </div>
             </Card>
 
-            <CostosPorConcepto costos={activo.costosPorConcepto} />
+            <CostosPorConcepto costos={activo.costosPorConcepto} fuente={activo.costosPorConceptoFuente} />
 
             {vista === "mensual" && <CostoPromedio costos={activo.costoPromedioPorConcepto} />}
 
@@ -574,21 +638,34 @@ export default async function ReportesPage({
               ) : (
                 <ul className="divide-y divide-border">
                   {activo.entregas.map((s) => (
-                    <li key={s.id} className="px-5 py-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-ink-primary flex items-center gap-2">
-                          {s.equipoDescripcion}
-                          <SerieTag serie={s.serie} />
-                        </p>
-                        <p className="text-xs text-ink-muted flex items-center gap-2">
-                          <span>
-                            {s.cliente} · {s.folio}
-                            {s.vendedor && <> · {s.vendedor}</>}
-                          </span>
-                          <ClockBadge fechaInicio={s.fechaInicio} fechaEntrega={s.fechaEntrega} tiempoCicloDias={s.tiempoCicloDias} />
-                        </p>
+                    <li key={s.id} className="px-5 py-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {s.fotoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={s.fotoUrl}
+                            alt=""
+                            className="w-11 h-11 rounded-md object-cover shrink-0 border border-border"
+                          />
+                        ) : (
+                          <div className="w-11 h-11 rounded-md bg-gray-100 shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm text-ink-primary flex items-center gap-2">
+                            {s.equipoDescripcion}
+                            <SerieTag serie={s.serie} />
+                          </p>
+                          <p className="text-xs text-ink-muted flex items-center gap-2 flex-wrap">
+                            <span>
+                              {s.cliente} · {s.folio}
+                              {s.vendedor && <> · {s.vendedor}</>}
+                              {s.aduana && <> · Aduana: {s.aduana}</>}
+                            </span>
+                            <ClockBadge fechaInicio={s.fechaInicio} fechaEntrega={s.fechaEntrega} tiempoCicloDias={s.tiempoCicloDias} />
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-ink-muted">{formatFecha(s.fechaEntrega)}</p>
+                      <p className="text-xs text-ink-muted shrink-0">{formatFecha(s.fechaEntrega)}</p>
                     </li>
                   ))}
                 </ul>

@@ -79,9 +79,27 @@ model Shipment {
   sales          Sale[]
   cotizacion     Cotizacion?
   gastosFleteUSA GastoFleteUSA[]
+  archivos       Documento[]
 
   @@index([estatus])
   @@index([fechaSalidaProgramada])
+}
+
+// Documento adjunto a una unidad (factura, pedimento, BL, etc.). El archivo
+// completo se guarda como data URL (base64) directo en la base, igual que
+// fotoUrl — mismo motivo: el proyecto se despliega en Vercel, donde el disco
+// no es persistente entre despliegues, así que guardar en la base funciona
+// igual en local y en producción sin depender de un servicio externo.
+model Documento {
+  id         String   @id @default(cuid())
+  shipmentId String
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  nombre     String   // etiqueta libre: "Factura", "Pedimento", "BL", etc.
+  archivoUrl String   // archivo completo como data URL (base64)
+  tipo       String?  // mime type del archivo original (para mostrar ícono / abrir bien)
+  createdAt  DateTime @default(now())
+
+  @@index([shipmentId])
 }
 
 // Bitácora de cambios de estatus (para el reporte diario/semanal/mensual)

@@ -9,6 +9,7 @@ import { CostosSyncProvider, SyncedMoneyInput, SyncedTotal, ViaticosFleteUSA, ty
 import ConfirmZeroCostButton from "@/components/ConfirmZeroCostButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import FotoEquipo from "@/components/FotoEquipo";
+import DocumentosEmbarque from "@/components/DocumentosEmbarque";
 import { getShipment, getProveedores } from "@/lib/queries";
 import {
   updateShipmentEstatusForm,
@@ -237,6 +238,13 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                 </button>
               </div>
             </form>
+          </Card>
+
+          <Card>
+            <CardHeader title="Documentos" subtitle="Factura, pedimento, BL, etc. — quedan guardados aquí para consultarlos cuando se necesiten" />
+            <div className="p-5">
+              <DocumentosEmbarque shipmentId={shipment.id} documentos={shipment.archivos} />
+            </div>
           </Card>
 
           {/* Costos y orden de pago */}

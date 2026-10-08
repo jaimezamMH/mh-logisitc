@@ -8,8 +8,9 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.1.93"],
   experimental: {
     serverActions: {
-      // las fotos de equipo van como texto base64 dentro de la acción del servidor
-      bodySizeLimit: "6mb",
+      // las fotos y documentos del equipo (facturas, pedimentos, etc.) van
+      // como texto base64 dentro de la acción del servidor
+      bodySizeLimit: "15mb",
     },
   },
 };
