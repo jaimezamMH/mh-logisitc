@@ -11,6 +11,8 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
+    "@prisma/adapter-neon": "^7.10.0",
     "@prisma/client": "^6.19.3",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.49.0",

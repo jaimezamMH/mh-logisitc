@@ -99,6 +99,40 @@ body {
   background: transparent;
 }
 
+/* Mundo (estilo planeta Tierra) con maquinaria orbitando, en el espacio vacío del menú lateral */
+@keyframes mh-earth-spin {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes mh-orbit-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes mh-orbit-counter-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+.mh-earth-spin {
+  animation: mh-earth-spin 9s linear infinite;
+}
+
+.mh-orbit {
+  animation: mh-orbit-spin 10s linear infinite;
+}
+
+.mh-orbit-counter {
+  animation: mh-orbit-counter-spin 10s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mh-earth-spin,
+  .mh-orbit,
+  .mh-orbit-counter {
+    animation: none;
+  }
+}
+
 @page {
   size: letter;
   margin: 1.2cm;

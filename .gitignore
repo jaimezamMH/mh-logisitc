@@ -42,12 +42,17 @@ next-env.d.ts
 
 /src/generated/prisma
 
-# base de datos local de desarrollo (SQLite)
+# base de datos local de desarrollo (SQLite) — ya no se usa, se migró a Postgres
+# (Neon), pero se deja el respaldo local por si hace falta consultarlo
 /prisma/dev.db
 /prisma/dev.db-journal
+/prisma/migrations_sqlite_backup
 
 # configuración local de Claude Code (no es parte del proyecto)
 /.claude/settings.local.json
 
 # logs del servidor local
 *.log
+
+.vercel
+.env*

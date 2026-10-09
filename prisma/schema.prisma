@@ -1,14 +1,21 @@
-// Esquema de base de datos de MH Logística
-// En desarrollo usa SQLite (archivo local). En producción (Vercel) se cambia
-// el provider a "postgresql" y DATABASE_URL apunta a la base en la nube.
+// Esquema de base de datos de MH Logística — Postgres (Neon), tanto en
+// desarrollo local como en producción (Vercel); DATABASE_URL apunta a la
+// misma base en la nube en los dos casos.
 
+// Se usa el "driver adapter" de Neon (@prisma/adapter-neon) para conectarse
+// a la base — así Prisma no depende de un motor nativo (.so.node) que hay
+// que empaquetar correctamente para cada plataforma; eso fue justo lo que
+// causaba que la app tronara en Vercel ("could not locate the Query Engine")
+// aunque localmente sí funcionaba. Con el adapter, la conexión real la hace
+// el driver de Neon (JS puro), sin binarios de por medio.
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider   = "prisma-client"
+  output     = "../src/generated/prisma"
+  engineType = "client"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
