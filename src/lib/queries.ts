@@ -528,6 +528,17 @@ export async function getReporteDiario(fecha: Date = new Date()) {
     prisma.shipment.findMany({
       where: { estatus: { not: "Entregado" } },
       orderBy: [{ estatus: "asc" }, { updatedAt: "desc" }],
+      include: {
+        // Los comentarios por unidad en el cierre diario NO se filtran por
+        // hoy a propósito: Jaime los usa como notas que se quedan puestas
+        // hasta que él mismo las cambie, no que se borren de la vista al
+        // día siguiente. Se traen los últimos 3 (mismo tope que ya existía).
+        comments: {
+          where: { tipo: "comentario" },
+          orderBy: { createdAt: "desc" },
+          take: 3,
+        },
+      },
     }),
   ]);
 

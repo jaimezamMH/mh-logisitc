@@ -64,12 +64,19 @@ export default async function OperacionesPage({
                         href={`/embarques/${s.id}`}
                         className="flex gap-2.5 rounded-lg border border-border p-3 hover:border-brand-blue-500 hover:shadow-sm transition-all"
                       >
-                        {s.fotoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={s.fotoUrl} alt="" className="w-12 h-12 rounded-md object-cover shrink-0 border border-border" />
-                        ) : (
-                          <div className="w-12 h-12 rounded-md bg-gray-100 shrink-0" />
-                        )}
+                        <div className="flex flex-col items-center gap-1 shrink-0">
+                          {s.fotoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={s.fotoUrl} alt="" className="w-16 h-16 rounded-md object-cover border border-border" />
+                          ) : (
+                            <div className="w-16 h-16 rounded-md bg-gray-100" />
+                          )}
+                          {s.aduana && (
+                            <span className="text-[10px] text-ink-muted text-center leading-tight max-w-16 truncate" title={s.aduana}>
+                              {s.aduana}
+                            </span>
+                          )}
+                        </div>
                         <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-ink-primary line-clamp-2">{s.equipoDescripcion}</p>
                         <p className="text-xs text-ink-muted mt-1">

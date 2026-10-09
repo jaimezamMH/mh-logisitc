@@ -475,7 +475,7 @@ export default async function ReportesPage({
                 return (
                 <ul className="divide-y divide-border">
                   {unidadesFiltradas.map((s) => {
-                    const comentariosUnidad = diario.comentarios.filter((c) => c.shipmentId === s.id);
+                    const comentariosUnidad = s.comments;
                     const eventosUnidadHoy = diario.eventos.filter((e) => e.shipmentId === s.id);
                     return (
                       <li key={s.id} className="px-5 py-3 space-y-2">
