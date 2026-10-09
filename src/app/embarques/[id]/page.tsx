@@ -284,13 +284,6 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
             )}
           </Card>
 
-          <Card>
-            <CardHeader title="Documentos" subtitle="Factura, pedimento, BL, etc. — quedan guardados aquí para consultarlos cuando se necesiten" />
-            <div className="p-5">
-              <DocumentosEmbarque shipmentId={shipment.id} documentos={shipment.archivos} soloLectura={soloLectura} />
-            </div>
-          </Card>
-
           {/* Costos y orden de pago */}
           {soloLectura ? (
             <div className="space-y-6">
@@ -582,6 +575,14 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
           </CostosSyncProvider>
           )}
         </div>
+
+        {/* Documentos — al final: es el último paso, después de generar la orden de pago */}
+        <Card>
+          <CardHeader title="Documentos" subtitle="Factura, pedimento, BL, etc. — quedan guardados aquí para consultarlos cuando se necesiten" />
+          <div className="p-5">
+            <DocumentosEmbarque shipmentId={shipment.id} documentos={shipment.archivos} soloLectura={soloLectura} />
+          </div>
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Comentarios */}
