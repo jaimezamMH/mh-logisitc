@@ -40,7 +40,12 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
   if (!shipment) notFound();
 
   const totalCostos =
-    shipment.costoFleteUSA + shipment.costoImportacion + shipment.costoManiobras + shipment.costoFleteMx + shipment.costoPermiso;
+    shipment.costoFleteUSA +
+    shipment.costoImportacion +
+    shipment.costoManiobras +
+    shipment.costoFleteMx +
+    shipment.costoPermiso +
+    shipment.costoRepuveTitulo;
 
   const esServicio = shipment.tipoVenta === "Servicio Logístico";
   const totalPrecioServicio =
@@ -299,6 +304,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                     ...(esServicio ? [] : [{ label: "Maniobra/Reparación", costo: shipment.costoManiobras, precio: 0 }]),
                     { label: "Flete México", costo: shipment.costoFleteMx, precio: shipment.precioFleteMx },
                     { label: "Permiso/Seguro/Placas", costo: shipment.costoPermiso, precio: shipment.precioPermiso },
+                    { label: "Repuve/Título", costo: shipment.costoRepuveTitulo, precio: 0 },
                   ].map((c) => (
                     <div key={c.label} className="flex items-center justify-between text-sm">
                       <span className="text-ink-secondary">{c.label}</span>
@@ -361,6 +367,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
               costoManiobras: String(shipment.costoManiobras),
               costoFleteMx: String(shipment.costoFleteMx),
               costoPermiso: String(shipment.costoPermiso),
+              costoRepuveTitulo: String(shipment.costoRepuveTitulo),
             }}
           >
           <div className="space-y-6">
@@ -370,7 +377,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                 subtitle={
                   esServicio
                     ? "Costo real (lo que pagas) vs. precio al cliente (lo que cobras) — la diferencia es tu utilidad"
-                    : "Alimenta aquí flete USA, importación, maniobras, flete Mx y permiso"
+                    : "Alimenta aquí flete USA, importación, maniobras, flete Mx, permiso y repuve/título"
                 }
               />
               <form action={updateShipmentCosts.bind(null, shipment.id)} className="p-5 space-y-4">
@@ -398,6 +405,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                       </div>
                     ))}
                     <input type="hidden" name="costoManiobras" value={shipment.costoManiobras} />
+                    <input type="hidden" name="costoRepuveTitulo" value={shipment.costoRepuveTitulo} />
                     <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center pt-2 border-t border-border">
                       <span className="text-sm font-semibold text-ink-primary">Total</span>
                       <span className="w-24 text-right text-sm font-semibold text-ink-primary">{formatMXN(totalCostos)}</span>
@@ -432,6 +440,10 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                       <span className="text-ink-secondary">Permiso/Seguro/Placas</span>
                       <SyncedMoneyInput campo="costoPermiso" />
                     </label>
+                    <label className="flex flex-col gap-1 text-sm">
+                      <span className="text-ink-secondary">Repuve/Título</span>
+                      <SyncedMoneyInput campo="costoRepuveTitulo" />
+                    </label>
                     <label className="flex items-center gap-2 text-sm mt-5">
                       <input type="checkbox" name="fleteMexAplica" defaultChecked={shipment.fleteMexAplica} />
                       <span className="text-ink-secondary">Aplica flete Mx</span>
@@ -464,6 +476,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                       { check: "incluirManiobras", campo: "costoManiobras", label: "Maniobra/Reparación" },
                       { check: "incluirFleteMx", campo: "costoFleteMx", label: "Flete México" },
                       { check: "incluirPermiso", campo: "costoPermiso", label: "Permiso/Seguro/Placas" },
+                      { check: "incluirRepuveTitulo", campo: "costoRepuveTitulo", label: "Repuve/Título" },
                     ].map((c) => (
                       <label key={c.check} className="flex items-center justify-between gap-2 text-sm rounded-lg border border-border px-3 py-2">
                         <span className="flex items-center gap-2 text-ink-secondary shrink-0">

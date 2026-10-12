@@ -30,6 +30,7 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
         { label: "Maniobra/Reparación", valor: order.costoManiobras },
         { label: "Flete México", valor: order.costoFleteMx },
         { label: "Permiso/Seguro/Placas", valor: order.costoPermiso },
+        { label: "Repuve/Título", valor: order.costoRepuveTitulo },
       ].filter((l) => l.valor > 0)
     : order.gastosGenerales.map((g) => ({ label: g.descripcion, valor: g.monto }));
 

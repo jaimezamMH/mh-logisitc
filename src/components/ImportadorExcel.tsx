@@ -27,6 +27,7 @@ const CAMPOS: { key: CampoDestino; label: string; tipo?: "numero" }[] = [
   { key: "costoManiobras", label: "Costo maniobra/reparación", tipo: "numero" },
   { key: "costoFleteMx", label: "Costo flete México", tipo: "numero" },
   { key: "costoPermiso", label: "Costo permiso/seguro", tipo: "numero" },
+  { key: "costoRepuveTitulo", label: "Costo repuve/título", tipo: "numero" },
 ];
 
 const PISTAS: Partial<Record<CampoDestino, string[]>> = {
@@ -49,6 +50,7 @@ const PISTAS: Partial<Record<CampoDestino, string[]>> = {
   costoManiobras: ["maniobra"],
   costoFleteMx: ["flete mx", "flete mexicano"],
   costoPermiso: ["permiso"],
+  costoRepuveTitulo: ["repuve", "titulo", "título"],
 };
 
 function guessColumn(headers: string[], campo: CampoDestino): string {
@@ -124,6 +126,7 @@ export default function ImportadorExcel() {
           costoManiobras: num("costoManiobras"),
           costoFleteMx: num("costoFleteMx"),
           costoPermiso: num("costoPermiso"),
+          costoRepuveTitulo: num("costoRepuveTitulo"),
         };
       });
 

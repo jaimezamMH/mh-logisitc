@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Truck, PackageCheck, Bell, AlertCircle, CheckCircle2, Ship, Landmark, Wrench, Signpost } from "lucide-react";
+import { Truck, PackageCheck, Bell, AlertCircle, CheckCircle2, Ship, Landmark, Wrench, Signpost, IdCard } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import { Card, CardHeader, EmptyState, StatCard, StatusBadge, SerieTag, ClockBadge } from "@/components/ui";
 import { getDashboardData, getAgendaHoy } from "@/lib/queries";
@@ -261,6 +261,7 @@ export default async function DashboardPage() {
               { label: "Maniobra/Reparación", value: data.costosPorConcepto.maniobras, icon: Wrench },
               { label: "Flete México", value: data.costosPorConcepto.fleteMx, icon: Ship },
               { label: "Permiso/Seguro/Placas", value: data.costosPorConcepto.permiso, icon: Signpost },
+              { label: "Repuve/Título", value: data.costosPorConcepto.repuveTitulo, icon: IdCard },
             ].map((c) => (
               <div key={c.label} className="rounded-lg border border-border p-3">
                 <c.icon size={16} className="text-brand-blue-600 mb-1.5" />

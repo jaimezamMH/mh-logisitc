@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Truck, Landmark, Wrench, Ship, Signpost, X } from "lucide-react";
+import { Truck, Landmark, Wrench, Ship, Signpost, IdCard, X } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import { Card, CardHeader, EmptyState, StatusBadge, SerieTag, ClockBadge } from "@/components/ui";
 import PrintButton from "@/components/PrintButton";
@@ -16,16 +16,18 @@ function CostosPorConcepto({
   costos,
   fuente = "ordenes",
 }: {
-  costos: { fleteUSA: number; importacion: number; maniobras: number; fleteMx: number; permiso: number };
+  costos: { fleteUSA: number; importacion: number; maniobras: number; fleteMx: number; permiso: number; repuveTitulo: number };
   fuente?: "ordenes" | "entregas";
 }) {
-  const total = costos.fleteUSA + costos.importacion + costos.maniobras + costos.fleteMx + costos.permiso;
+  const total =
+    costos.fleteUSA + costos.importacion + costos.maniobras + costos.fleteMx + costos.permiso + costos.repuveTitulo;
   const conceptos = [
     { label: "Flete USA", value: costos.fleteUSA, icon: Truck },
     { label: "Importación / Aduana", value: costos.importacion, icon: Landmark },
     { label: "Maniobra/Reparación", value: costos.maniobras, icon: Wrench },
     { label: "Flete México", value: costos.fleteMx, icon: Ship },
     { label: "Permiso/Seguro/Placas", value: costos.permiso, icon: Signpost },
+    { label: "Repuve/Título", value: costos.repuveTitulo, icon: IdCard },
   ];
   return (
     <Card>
@@ -117,7 +119,7 @@ function PagosPorProveedor({
 function CostoPromedio({
   costos,
 }: {
-  costos: { fleteUSA: number; importacion: number; maniobras: number; fleteMx: number; permiso: number };
+  costos: { fleteUSA: number; importacion: number; maniobras: number; fleteMx: number; permiso: number; repuveTitulo: number };
 }) {
   const conceptos = [
     { label: "Flete USA", value: costos.fleteUSA, icon: Truck },
@@ -125,6 +127,7 @@ function CostoPromedio({
     { label: "Maniobra/Reparación", value: costos.maniobras, icon: Wrench },
     { label: "Flete México", value: costos.fleteMx, icon: Ship },
     { label: "Permiso/Seguro/Placas", value: costos.permiso, icon: Signpost },
+    { label: "Repuve/Título", value: costos.repuveTitulo, icon: IdCard },
   ];
   return (
     <Card>

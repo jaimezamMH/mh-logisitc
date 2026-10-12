@@ -293,6 +293,7 @@ export async function updateShipmentCosts(shipmentId: string, formData: FormData
       costoManiobras: num(formData, "costoManiobras"),
       costoFleteMx: num(formData, "costoFleteMx"),
       costoPermiso: num(formData, "costoPermiso"),
+      costoRepuveTitulo: num(formData, "costoRepuveTitulo"),
       fleteMexAplica: formData.get("fleteMexAplica") === "on",
       ...(tienePrecios
         ? {
@@ -370,6 +371,7 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
     { campo: "costoManiobras", check: "incluirManiobras", label: "Maniobra/Reparación" },
     { campo: "costoFleteMx", check: "incluirFleteMx", label: "Flete México" },
     { campo: "costoPermiso", check: "incluirPermiso", label: "Permiso/Seguro/Placas" },
+    { campo: "costoRepuveTitulo", check: "incluirRepuveTitulo", label: "Repuve/Título" },
   ] as const;
 
   const costosActualizados: Record<string, number> = usaGastosFleteUSA ? {} : { costoFleteUSA: montoFleteUSA };
@@ -391,6 +393,7 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
     costoManiobras: 0,
     costoFleteMx: 0,
     costoPermiso: 0,
+    costoRepuveTitulo: 0,
   };
   const etiquetas: string[] = [];
   if (incluirFleteUSA) etiquetas.push("Flete USA");
@@ -404,7 +407,7 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
   const concepto =
     etiquetas.length === 0
       ? "Sin conceptos"
-      : etiquetas.length === 5
+      : etiquetas.length === 6
         ? "Todos los conceptos"
         : etiquetas.join(" + ");
 
@@ -428,6 +431,7 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
       costoManiobras: montos.costoManiobras,
       costoFleteMx: montos.costoFleteMx,
       costoPermiso: montos.costoPermiso,
+      costoRepuveTitulo: montos.costoRepuveTitulo,
       concepto,
       total,
       tipoCambio: tipoCambio && tipoCambio > 0 ? tipoCambio : null,
@@ -779,6 +783,7 @@ export interface ImportShipmentRow {
   costoManiobras?: number;
   costoFleteMx?: number;
   costoPermiso?: number;
+  costoRepuveTitulo?: number;
 }
 
 export async function importShipments(rows: ImportShipmentRow[]) {
@@ -811,6 +816,7 @@ export async function importShipments(rows: ImportShipmentRow[]) {
         costoManiobras: row.costoManiobras ?? 0,
         costoFleteMx: row.costoFleteMx ?? 0,
         costoPermiso: row.costoPermiso ?? 0,
+        costoRepuveTitulo: row.costoRepuveTitulo ?? 0,
       },
     });
     creados += 1;

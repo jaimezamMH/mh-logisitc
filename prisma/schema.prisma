@@ -54,6 +54,7 @@ model Shipment {
   costoManiobras    Float    @default(0)
   costoFleteMx      Float    @default(0)
   costoPermiso      Float    @default(0)
+  costoRepuveTitulo Float    @default(0) // Repuve / Título — trámite de registro vehicular
   fleteMexAplica    Boolean  @default(true)
 
   // Precio cobrado al cliente por cada servicio logístico (solo aplica
@@ -140,6 +141,7 @@ model PaymentOrder {
   costoManiobras    Float
   costoFleteMx      Float
   costoPermiso      Float
+  costoRepuveTitulo Float    @default(0)
   total             Float
   tipoCambio        Float? // pesos por dólar del día, para ver el total también en MXN
   concepto          String? // qué se está pagando: "Flete USA", "Varios conceptos", etc.

@@ -1,8 +1,8 @@
 "use client";
 
-const CAMPOS_COSTO = ["costoFleteUSA", "costoImportacion", "costoManiobras", "costoFleteMx", "costoPermiso"];
+const CAMPOS_COSTO = ["costoFleteUSA", "costoImportacion", "costoManiobras", "costoFleteMx", "costoPermiso", "costoRepuveTitulo"];
 
-// Botón de "Generar orden de pago": si los 5 conceptos de costo están en
+// Botón de "Generar orden de pago": si los conceptos de costo están en
 // $0 (nadie los capturó todavía), avisa antes de generarla — para que no
 // salga una orden en blanco sin que nadie se dé cuenta hasta imprimirla.
 export default function ConfirmZeroCostButton({
@@ -34,7 +34,7 @@ export default function ConfirmZeroCostButton({
         });
         if (total === 0) {
           const continuar = window.confirm(
-            "Los 5 conceptos de costo están en $0 — la orden saldría sin ningún monto. ¿Seguro que quieres generarla así?"
+            "Los conceptos de costo están en $0 — la orden saldría sin ningún monto. ¿Seguro que quieres generarla así?"
           );
           if (!continuar) e.preventDefault();
         }

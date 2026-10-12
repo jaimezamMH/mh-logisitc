@@ -42,6 +42,7 @@ type ConCostos = {
   costoManiobras: number;
   costoFleteMx: number;
   costoPermiso: number;
+  costoRepuveTitulo: number;
 };
 
 function costosPorConceptoDe(unidades: ConCostos[]) {
@@ -52,9 +53,10 @@ function costosPorConceptoDe(unidades: ConCostos[]) {
       acc.maniobras += s.costoManiobras;
       acc.fleteMx += s.costoFleteMx;
       acc.permiso += s.costoPermiso;
+      acc.repuveTitulo += s.costoRepuveTitulo;
       return acc;
     },
-    { fleteUSA: 0, importacion: 0, maniobras: 0, fleteMx: 0, permiso: 0 }
+    { fleteUSA: 0, importacion: 0, maniobras: 0, fleteMx: 0, permiso: 0, repuveTitulo: 0 }
   );
 }
 
@@ -169,7 +171,8 @@ export async function getDashboardData() {
       s.costoImportacion +
       s.costoManiobras +
       s.costoFleteMx +
-      s.costoPermiso,
+      s.costoPermiso +
+      s.costoRepuveTitulo,
     0
   );
 
@@ -446,6 +449,7 @@ export async function getCostosPromedio2026() {
   ];
   const maniobras = shipments.map((s) => s.costoManiobras).filter((v) => v > 0);
   const permiso = shipments.map((s) => s.costoPermiso).filter((v) => v > 0);
+  const repuveTitulo = shipments.map((s) => s.costoRepuveTitulo).filter((v) => v > 0);
 
   const avg = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
 
@@ -455,6 +459,7 @@ export async function getCostosPromedio2026() {
     fleteMx: { promedio: avg(fleteMx), n: fleteMx.length },
     maniobras: { promedio: avg(maniobras), n: maniobras.length },
     permiso: { promedio: avg(permiso), n: permiso.length },
+    repuveTitulo: { promedio: avg(repuveTitulo), n: repuveTitulo.length },
   };
 }
 
@@ -551,7 +556,8 @@ export async function getReporteDiario(fecha: Date = new Date()) {
       e.shipment.costoImportacion +
       e.shipment.costoManiobras +
       e.shipment.costoFleteMx +
-      e.shipment.costoPermiso,
+      e.shipment.costoPermiso +
+      e.shipment.costoRepuveTitulo,
     0
   );
   // "Costo por concepto" se saca de las ÓRDENES DE PAGO generadas hoy (no de
@@ -594,7 +600,8 @@ export async function getReporteRango(from: Date, to: Date) {
 
   const totalPagado = ordenes.reduce((a, o) => a + o.total, 0);
   const costoTotalUSD = entregas.reduce(
-    (a, s) => a + s.costoFleteUSA + s.costoImportacion + s.costoManiobras + s.costoFleteMx + s.costoPermiso,
+    (a, s) =>
+      a + s.costoFleteUSA + s.costoImportacion + s.costoManiobras + s.costoFleteMx + s.costoPermiso + s.costoRepuveTitulo,
     0
   );
 
@@ -625,6 +632,7 @@ export async function getReporteRango(from: Date, to: Date) {
     maniobras: costosPorConceptoEntregas.maniobras / n,
     fleteMx: costosPorConceptoEntregas.fleteMx / n,
     permiso: costosPorConceptoEntregas.permiso / n,
+    repuveTitulo: costosPorConceptoEntregas.repuveTitulo / n,
   };
 
   // Ciclo promedio (días) de las unidades entregadas en este periodo.

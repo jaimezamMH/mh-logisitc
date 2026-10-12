@@ -10,6 +10,7 @@ export type Costos = {
   costoManiobras: string;
   costoFleteMx: string;
   costoPermiso: string;
+  costoRepuveTitulo: string;
 };
 export type CostoCampo = keyof Costos;
 
