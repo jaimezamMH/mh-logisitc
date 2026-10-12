@@ -554,6 +554,8 @@ export async function generarOrdenDePagoGeneral(formData: FormData): Promise<voi
 
   const total = items.reduce((a, it) => a + it.monto, 0);
   const concepto = str(formData, "concepto") || "Otros / Gastos generales";
+  const tipoCambioTexto = str(formData, "tipoCambio");
+  const tipoCambio = tipoCambioTexto ? num(formData, "tipoCambio") : null;
 
   const order = await prisma.paymentOrder.create({
     data: {
@@ -567,6 +569,7 @@ export async function generarOrdenDePagoGeneral(formData: FormData): Promise<voi
       costoPermiso: 0,
       total,
       concepto,
+      tipoCambio: tipoCambio && tipoCambio > 0 ? tipoCambio : null,
       monedaCuenta: str(formData, "monedaCuenta"),
       banco: str(formData, "banco"),
       direccionBanco: str(formData, "direccionBanco"),

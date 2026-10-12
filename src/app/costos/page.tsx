@@ -1,6 +1,6 @@
 import Link from "next/link";
 import TopBar from "@/components/TopBar";
-import { Card, CardHeader, EmptyState, StatCard, SerieTag } from "@/components/ui";
+import { Card, CardHeader, EmptyState, StatCard, SerieTag, MoneyInput } from "@/components/ui";
 import CostosEditableTable from "@/components/CostosEditableTable";
 import Buscador from "@/components/Buscador";
 import { prisma } from "@/lib/prisma";
@@ -123,54 +123,6 @@ export default async function CostosPage({
           />
         </div>
 
-        {!soloLectura && (
-          <Card id="pagos-generales">
-            <CardHeader
-              title="Pagos generales"
-              subtitle="Gastos que no se cargan a ningún equipo en particular — ej. renta, gasolina, gastos varios (concepto 'Otros')"
-            />
-            <form action={generarOrdenDePagoGeneral} className="p-5 space-y-4">
-              <GastoGeneralForm />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border">
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="text-ink-secondary">Concepto / etiqueta</span>
-                  <input
-                    name="concepto"
-                    defaultValue="Otros / Gastos generales"
-                    className="rounded-lg border border-border px-3 py-2 text-sm"
-                  />
-                </label>
-                <UserSelect name="generadaPor" label="Solicitada por" />
-              </div>
-              <div className="pt-2 border-t border-border">
-                <p className="text-xs font-medium text-ink-muted uppercase tracking-wide mb-2">
-                  Datos bancarios para el pago (opcional)
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <BancoSelect />
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="text-ink-secondary">Nombre del titular</span>
-                    <input name="titular" className="rounded-lg border border-border px-3 py-2 text-sm" />
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="text-ink-secondary">Número de cuenta</span>
-                    <input name="numeroCuenta" className="rounded-lg border border-border px-3 py-2 text-sm" />
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="text-ink-secondary">CLABE interbancaria</span>
-                    <input name="clabe" className="rounded-lg border border-border px-3 py-2 text-sm" />
-                  </label>
-                </div>
-              </div>
-              <input name="notas" placeholder="Notas para administración (opcional)" className="w-full rounded-lg border border-border px-3 py-2 text-sm" />
-              <button className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand-orange-500 hover:bg-brand-orange-600 text-white text-sm font-medium py-2.5">
-                <Printer size={16} />
-                Generar e imprimir orden de pago
-              </button>
-            </form>
-          </Card>
-        )}
-
         <Card id="ordenes">
           <CardHeader
             title="Órdenes de pago generadas"
@@ -277,6 +229,61 @@ export default async function CostosPage({
             </div>
           )}
         </Card>
+
+        {!soloLectura && (
+          <Card id="pagos-generales">
+            <CardHeader
+              title="Pagos generales"
+              subtitle="Gastos que no se cargan a ningún equipo en particular — ej. renta, gasolina, gastos varios (concepto 'Otros')"
+            />
+            <form action={generarOrdenDePagoGeneral} className="p-5 space-y-4">
+              <GastoGeneralForm />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-ink-secondary">Concepto / etiqueta</span>
+                  <input
+                    name="concepto"
+                    defaultValue="Otros / Gastos generales"
+                    className="rounded-lg border border-border px-3 py-2 text-sm"
+                  />
+                </label>
+                <UserSelect name="generadaPor" label="Solicitada por" />
+              </div>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Tipo de cambio del día (pesos por dólar)</span>
+                <MoneyInput name="tipoCambio" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                <span className="text-xs text-ink-muted">
+                  Opcional — si lo llenas, la orden muestra el total también en pesos.
+                </span>
+              </label>
+              <div className="pt-2 border-t border-border">
+                <p className="text-xs font-medium text-ink-muted uppercase tracking-wide mb-2">
+                  Datos bancarios para el pago (opcional)
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <BancoSelect />
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-ink-secondary">Nombre del titular</span>
+                    <input name="titular" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-ink-secondary">Número de cuenta</span>
+                    <input name="numeroCuenta" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-ink-secondary">CLABE interbancaria</span>
+                    <input name="clabe" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                  </label>
+                </div>
+              </div>
+              <input name="notas" placeholder="Notas para administración (opcional)" className="w-full rounded-lg border border-border px-3 py-2 text-sm" />
+              <button className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand-orange-500 hover:bg-brand-orange-600 text-white text-sm font-medium py-2.5">
+                <Printer size={16} />
+                Generar e imprimir orden de pago
+              </button>
+            </form>
+          </Card>
+        )}
 
         <Card id="unidades">
           <CardHeader
