@@ -5,10 +5,13 @@ import CostosEditableTable from "@/components/CostosEditableTable";
 import Buscador from "@/components/Buscador";
 import { prisma } from "@/lib/prisma";
 import { formatFecha, formatMXN, coincideBusqueda } from "@/lib/constants";
-import { cancelarOrdenDePago, eliminarOrdenDePago, marcarOrdenPagada } from "@/lib/actions";
+import { cancelarOrdenDePago, eliminarOrdenDePago, marcarOrdenPagada, generarOrdenDePagoGeneral } from "@/lib/actions";
 import { esSoloLectura } from "@/lib/auth-server";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
-import { AlertTriangle, FileClock, Layers } from "lucide-react";
+import GastoGeneralForm from "@/components/GastoGeneralForm";
+import UserSelect from "@/components/UserSelect";
+import BancoSelect from "@/components/BancoSelect";
+import { AlertTriangle, FileClock, Layers, Printer } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +74,10 @@ export default async function CostosPage({
   const sinOrden = activos.filter((s) => s._count.paymentOrders === 0).length;
 
   const ordenes = ordenesTodas.filter((o) => {
-    if (buscar && !coincideBusqueda(buscar, [o.shipment.equipoDescripcion, o.shipment.cliente, o.shipment.serie, o.shipment.folio])) {
+    const camposBusqueda = o.shipment
+      ? [o.shipment.equipoDescripcion, o.shipment.cliente, o.shipment.serie, o.shipment.folio]
+      : [o.concepto, o.folio, "gasto general", "otros"];
+    if (buscar && !coincideBusqueda(buscar, camposBusqueda)) {
       return false;
     }
     if (ordenesFiltro === "todas") return true;
@@ -117,6 +123,54 @@ export default async function CostosPage({
           />
         </div>
 
+        {!soloLectura && (
+          <Card id="pagos-generales">
+            <CardHeader
+              title="Pagos generales"
+              subtitle="Gastos que no se cargan a ningún equipo en particular — ej. renta, gasolina, gastos varios (concepto 'Otros')"
+            />
+            <form action={generarOrdenDePagoGeneral} className="p-5 space-y-4">
+              <GastoGeneralForm />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-border">
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-ink-secondary">Concepto / etiqueta</span>
+                  <input
+                    name="concepto"
+                    defaultValue="Otros / Gastos generales"
+                    className="rounded-lg border border-border px-3 py-2 text-sm"
+                  />
+                </label>
+                <UserSelect name="generadaPor" label="Solicitada por" />
+              </div>
+              <div className="pt-2 border-t border-border">
+                <p className="text-xs font-medium text-ink-muted uppercase tracking-wide mb-2">
+                  Datos bancarios para el pago (opcional)
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <BancoSelect />
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-ink-secondary">Nombre del titular</span>
+                    <input name="titular" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-ink-secondary">Número de cuenta</span>
+                    <input name="numeroCuenta" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="text-ink-secondary">CLABE interbancaria</span>
+                    <input name="clabe" className="rounded-lg border border-border px-3 py-2 text-sm" />
+                  </label>
+                </div>
+              </div>
+              <input name="notas" placeholder="Notas para administración (opcional)" className="w-full rounded-lg border border-border px-3 py-2 text-sm" />
+              <button className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand-orange-500 hover:bg-brand-orange-600 text-white text-sm font-medium py-2.5">
+                <Printer size={16} />
+                Generar e imprimir orden de pago
+              </button>
+            </form>
+          </Card>
+        )}
+
         <Card id="ordenes">
           <CardHeader
             title="Órdenes de pago generadas"
@@ -160,10 +214,16 @@ export default async function CostosPage({
                         </Link>
                       </td>
                       <td className="px-5 py-2.5 text-ink-primary">
-                        {o.shipment.equipoDescripcion}
-                        <div className="mt-0.5">
-                          <SerieTag serie={o.shipment.serie} />
-                        </div>
+                        {o.shipment ? (
+                          <>
+                            {o.shipment.equipoDescripcion}
+                            <div className="mt-0.5">
+                              <SerieTag serie={o.shipment.serie} />
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-ink-muted italic">Gasto general (sin unidad)</span>
+                        )}
                       </td>
                       <td className="px-5 py-2.5 text-ink-secondary">{o.concepto ?? "Todos los conceptos"}</td>
                       <td className="px-5 py-2.5 text-ink-muted">{formatFecha(o.fechaGenerada)}</td>

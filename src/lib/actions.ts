@@ -523,8 +523,59 @@ export async function eliminarOrdenDePago(orderId: string): Promise<void> {
   if (!order) return;
   await prisma.paymentOrder.delete({ where: { id: orderId } });
   revalidatePath("/costos");
+  if (!order.shipmentId) redirect("/costos");
   revalidatePath(`/embarques/${order.shipmentId}`);
   redirect(`/embarques/${order.shipmentId}`);
+}
+
+// Orden de pago GENERAL — no ligada a ninguna unidad, para gastos que no
+// corresponden a un equipo en particular (ej. renta de oficina, gastos
+// varios). El desglose (uno o más conceptos con su monto) se captura todo
+// junto en el mismo formulario, como pares "gastoDescripcion"/"gastoMonto".
+export async function generarOrdenDePagoGeneral(formData: FormData): Promise<void> {
+  await requireFullAccess();
+
+  const descripciones = formData.getAll("gastoDescripcion").map((v) => String(v).trim());
+  const montosTexto = formData.getAll("gastoMonto").map((v) => String(v));
+  const items = descripciones
+    .map((descripcion, i) => ({
+      descripcion,
+      monto: Number((montosTexto[i] ?? "0").replace(/[^0-9.-]/g, "")) || 0,
+    }))
+    .filter((it) => it.descripcion && it.monto > 0);
+
+  if (items.length === 0) {
+    throw new Error("Agrega al menos un gasto con descripción y monto.");
+  }
+
+  const total = items.reduce((a, it) => a + it.monto, 0);
+  const concepto = str(formData, "concepto") || "Otros / Gastos generales";
+
+  const order = await prisma.paymentOrder.create({
+    data: {
+      folio: await nextOrderFolio(),
+      generadaPor: str(formData, "generadaPor") ?? "Sin especificar",
+      notas: str(formData, "notas"),
+      costoFleteUSA: 0,
+      costoImportacion: 0,
+      costoManiobras: 0,
+      costoFleteMx: 0,
+      costoPermiso: 0,
+      total,
+      concepto,
+      monedaCuenta: str(formData, "monedaCuenta"),
+      banco: str(formData, "banco"),
+      direccionBanco: str(formData, "direccionBanco"),
+      numeroCuenta: str(formData, "numeroCuenta"),
+      clabe: str(formData, "clabe"),
+      titular: str(formData, "titular"),
+      direccionTitular: str(formData, "direccionTitular"),
+      gastosGenerales: { create: items },
+    },
+  });
+
+  revalidatePath("/costos");
+  redirect(`/orden-pago/${order.id}`);
 }
 
 // ---------------------------------------------------------------------------

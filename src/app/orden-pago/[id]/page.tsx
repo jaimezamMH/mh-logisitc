@@ -13,27 +13,32 @@ export const dynamic = "force-dynamic";
 export default async function OrdenPagoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [order, soloLectura] = await Promise.all([
-    prisma.paymentOrder.findUnique({ where: { id }, include: { shipment: true } }),
+    prisma.paymentOrder.findUnique({
+      where: { id },
+      include: { shipment: true, gastosGenerales: { orderBy: { createdAt: "asc" } } },
+    }),
     esSoloLectura(),
   ]);
   if (!order) notFound();
 
   const s = order.shipment;
 
-  const lineas = [
-    { label: "Flete USA", valor: order.costoFleteUSA },
-    { label: "Importación / Aduana", valor: order.costoImportacion },
-    { label: "Maniobra/Reparación", valor: order.costoManiobras },
-    { label: "Flete México", valor: order.costoFleteMx },
-    { label: "Permiso/Seguro/Placas", valor: order.costoPermiso },
-  ].filter((l) => l.valor > 0);
+  const lineas = s
+    ? [
+        { label: "Flete USA", valor: order.costoFleteUSA },
+        { label: "Importación / Aduana", valor: order.costoImportacion },
+        { label: "Maniobra/Reparación", valor: order.costoManiobras },
+        { label: "Flete México", valor: order.costoFleteMx },
+        { label: "Permiso/Seguro/Placas", valor: order.costoPermiso },
+      ].filter((l) => l.valor > 0)
+    : order.gastosGenerales.map((g) => ({ label: g.descripcion, valor: g.monto }));
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
       <div className="no-print sticky top-0 z-10 bg-white border-b border-border px-6 h-16 flex items-center justify-between">
-        <Link href={`/embarques/${s.id}`} className="flex items-center gap-2 text-sm text-ink-secondary hover:text-ink-primary">
+        <Link href={s ? `/embarques/${s.id}` : "/costos"} className="flex items-center gap-2 text-sm text-ink-secondary hover:text-ink-primary">
           <ArrowLeft size={16} />
-          Volver a la unidad
+          {s ? "Volver a la unidad" : "Volver a costos"}
         </Link>
         <div className="flex items-center gap-3">
           {!soloLectura && (
@@ -99,7 +104,7 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
         </div>
 
         <div className="flex gap-6 mb-8 print:mb-4">
-          {s.fotoUrl && (
+          {s?.fotoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={s.fotoUrl}
@@ -116,14 +121,24 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
               </p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-wide text-ink-muted mb-1">Unidad / Embarque</p>
-              <p className="font-medium text-ink-primary">{s.equipoDescripcion}</p>
-              <p className="text-ink-secondary">
-                Cliente: {s.cliente} · Serie: {s.serie}
+              <p className="text-xs uppercase tracking-wide text-ink-muted mb-1">
+                {s ? "Unidad / Embarque" : "Tipo de gasto"}
               </p>
-              <p className="text-ink-secondary">
-                Folio interno: {s.folio} {s.aduana ? `· Aduana: ${s.aduana}` : ""}
-              </p>
+              {s ? (
+                <>
+                  <p className="font-medium text-ink-primary">{s.equipoDescripcion}</p>
+                  <p className="text-ink-secondary">
+                    Cliente: {s.cliente} · Serie: {s.serie}
+                  </p>
+                  <p className="text-ink-secondary">
+                    Folio interno: {s.folio} {s.aduana ? `· Aduana: ${s.aduana}` : ""}
+                  </p>
+                </>
+              ) : (
+                <p className="font-medium text-ink-primary">
+                  Gasto general — no ligado a ninguna unidad en particular
+                </p>
+              )}
             </div>
           </div>
         </div>

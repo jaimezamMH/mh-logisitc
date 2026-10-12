@@ -124,12 +124,15 @@ model StatusEvent {
   @@index([fecha])
 }
 
-// Orden de pago generada para requisición con administración
+// Orden de pago generada para requisición con administración. shipmentId es
+// opcional: si no trae unidad, es una orden "general" (gasto que no se liga
+// a ningún equipo en particular — renta de oficina, gastos varios, etc.),
+// con su propio desglose en gastosGenerales.
 model PaymentOrder {
-  id                String   @id @default(cuid())
-  folio             String   @unique
-  shipmentId        String
-  shipment          Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  id                String    @id @default(cuid())
+  folio             String    @unique
+  shipmentId        String?
+  shipment          Shipment? @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
   fechaGenerada     DateTime @default(now())
   generadaPor       String?
   costoFleteUSA     Float
@@ -158,7 +161,24 @@ model PaymentOrder {
   detalleFleteUSA   String?
   gastosFleteUSA    GastoFleteUSA[]
 
+  // Desglose de una orden GENERAL (sin unidad) — cada línea es un gasto con
+  // su descripción y monto, ej. "Renta de oficina: $5,000", "Gasolina: $800".
+  gastosGenerales   GastoGeneral[]
+
   @@index([shipmentId])
+}
+
+// Un gasto dentro de una orden de pago GENERAL (concepto "Otros" — no ligada
+// a ningún equipo). Permite desglosar de qué se compone el monto total.
+model GastoGeneral {
+  id             String       @id @default(cuid())
+  paymentOrderId String
+  paymentOrder   PaymentOrder @relation(fields: [paymentOrderId], references: [id], onDelete: Cascade)
+  descripcion    String
+  monto          Float
+  createdAt      DateTime     @default(now())
+
+  @@index([paymentOrderId])
 }
 
 // Un gasto individual que compone el costo de Flete USA de una unidad (no es
