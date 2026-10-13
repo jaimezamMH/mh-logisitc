@@ -191,6 +191,36 @@ export const ADUANAS = [
 
 export const TIPOS_UNIDAD = ["CAMION", "AMARILLO"] as const;
 
+// Categorías fijas de equipo, según el tipo de unidad (Camión o Amarilla).
+// Se seleccionan de una lista (ya no se escriben a mano) para evitar variaciones
+// de escritura del mismo tipo de equipo (ej. "Camion" vs "Camión").
+export const CATEGORIAS_CAMION = [
+  "Grúa Titán",
+  "Grúa Articulada",
+  "Grúa Canastilla",
+  "Grúa RT",
+  "Grúa Todo Terreno",
+  "Bomba de Concreto",
+  "Trompo Revolvedor",
+  "Camión de Volteo",
+  "Camión Plataforma",
+  "Roll Off",
+  "Camión (otro)",
+  "Otros / Accesorios",
+] as const;
+
+export const CATEGORIAS_AMARILLO = [
+  "Retroexcavadora",
+  "Excavadora",
+  "Cargador Frontal",
+  "Minicargador",
+  "Montacargas",
+  "Elevador / Plataforma",
+  "Vibrocompactador",
+  "Tractor Agrícola",
+  "Otros / Accesorios",
+] as const;
+
 export const MESES = [
   "Enero",
   "Febrero",

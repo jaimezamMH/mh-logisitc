@@ -1,9 +1,10 @@
 import TopBar from "@/components/TopBar";
 import { Card, CardHeader } from "@/components/ui";
 import SelectOrNew from "@/components/SelectOrNew";
+import CategoriaTipoSelect from "@/components/CategoriaTipoSelect";
 import { createShipment } from "@/lib/actions";
 import { getProveedores } from "@/lib/queries";
-import { ADUANAS, ESTATUS_FLOW, TIPOS_UNIDAD, VENDEDORES } from "@/lib/constants";
+import { ADUANAS, ESTATUS_FLOW, VENDEDORES } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -26,26 +27,7 @@ export default async function NuevoEmbarquePage() {
               />
             </label>
 
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-ink-secondary">Categoría</span>
-              <input
-                name="categoria"
-                placeholder="Ej. Grúa Articulada"
-                className="rounded-lg border border-border px-3 py-2 text-sm"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm">
-              <span className="text-ink-secondary">Tipo de unidad</span>
-              <select name="tipoUnidad" className="rounded-lg border border-border px-3 py-2 text-sm">
-                <option value="">Selecciona…</option>
-                {TIPOS_UNIDAD.map((t) => (
-                  <option key={t} value={t}>
-                    {t === "CAMION" ? "Camión" : "Amarilla (maquinaria)"}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <CategoriaTipoSelect />
 
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-ink-secondary">Serie</span>

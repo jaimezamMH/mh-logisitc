@@ -11,6 +11,7 @@ import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import FotoEquipo from "@/components/FotoEquipo";
 import DocumentosEmbarque from "@/components/DocumentosEmbarque";
 import EstatusTimeline from "@/components/EstatusTimeline";
+import CategoriaTipoSelect from "@/components/CategoriaTipoSelect";
 import { getShipment, getProveedores } from "@/lib/queries";
 import { esSoloLectura } from "@/lib/auth-server";
 import {
@@ -24,7 +25,7 @@ import {
   resolveComment,
   deleteShipment,
 } from "@/lib/actions";
-import { ADUANAS, ESTATUS_FLOW, TIPOS_UNIDAD, VENDEDORES, estatusInfo, formatFecha, formatMXN } from "@/lib/constants";
+import { ADUANAS, ESTATUS_FLOW, VENDEDORES, estatusInfo, formatFecha, formatMXN } from "@/lib/constants";
 import { calcularDuracionPorEtapa, calcularTimelineEstatus } from "@/lib/ciclo";
 import { Trash2, Printer } from "lucide-react";
 
@@ -207,21 +208,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                 <span className="text-ink-secondary">Serie</span>
                 <input name="serie" defaultValue={shipment.serie} className="rounded-lg border border-border px-3 py-2 text-sm" />
               </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-ink-secondary">Categoría</span>
-                <input name="categoria" defaultValue={shipment.categoria ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm" />
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="text-ink-secondary">Tipo de unidad</span>
-                <select name="tipoUnidad" defaultValue={shipment.tipoUnidad ?? ""} className="rounded-lg border border-border px-3 py-2 text-sm">
-                  <option value="">Selecciona…</option>
-                  {TIPOS_UNIDAD.map((t) => (
-                    <option key={t} value={t}>
-                      {t === "CAMION" ? "Camión" : "Amarilla (maquinaria)"}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <CategoriaTipoSelect tipoUnidadDefault={shipment.tipoUnidad} categoriaDefault={shipment.categoria} />
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-ink-secondary">Vendedor</span>
                 <SelectOrNew
