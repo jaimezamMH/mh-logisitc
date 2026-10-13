@@ -18,9 +18,10 @@ export default function EstatusTimeline({
         {steps.map((step, i) => {
           const isLast = i === steps.length - 1;
           const titulo = `${step.label}${step.fechaLabel ? " — " + step.fechaLabel : ""}`;
+          const fechaCorta = step.fechaLabel ? step.fechaLabel.replace(/\s\d{4}$/, "") : null;
           return (
-            <div key={step.key} className="flex items-start" title={compact ? titulo : undefined}>
-              <div className={`flex flex-col items-center ${compact ? "w-10 sm:w-12" : "w-[72px] sm:w-24"}`}>
+            <div key={step.key} className="flex items-start" title={titulo}>
+              <div className={`flex flex-col items-center ${compact ? "w-11 sm:w-12" : "w-[72px] sm:w-24"}`}>
                 <div
                   className={`relative flex items-center justify-center ${compact ? "h-4 w-4" : "h-7 w-7"}`}
                 >
@@ -44,7 +45,11 @@ export default function EstatusTimeline({
                     }`}
                   />
                 </div>
-                {!compact && (
+                {compact ? (
+                  <span className="mt-1 text-[9px] text-ink-muted leading-none whitespace-nowrap">
+                    {fechaCorta ?? "—"}
+                  </span>
+                ) : (
                   <>
                     <span
                       className={`mt-1.5 text-[10px] sm:text-[11px] font-medium text-center leading-tight ${
