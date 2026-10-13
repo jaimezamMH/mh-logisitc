@@ -5,8 +5,10 @@ import { Card, CardHeader, EmptyState, StatusBadge, SerieTag, ClockBadge } from 
 import PrintButton from "@/components/PrintButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Buscador from "@/components/Buscador";
+import EstatusTimeline from "@/components/EstatusTimeline";
 import { getReporteDiario, getReporteRango } from "@/lib/queries";
 import { formatFecha, formatMXN, coincideBusqueda } from "@/lib/constants";
+import { calcularTimelineEstatus } from "@/lib/ciclo";
 import { createComment, updateComment, deleteComment } from "@/lib/actions";
 import { esSoloLectura } from "@/lib/auth-server";
 
@@ -511,6 +513,11 @@ export default async function ReportesPage({
                           </div>
                           <StatusBadge estatus={s.estatus} />
                         </div>
+
+                        <EstatusTimeline
+                          size="compact"
+                          steps={calcularTimelineEstatus(s.statusEvents, s.estatus, s.fechaInicio, s.createdAt)}
+                        />
 
                         <p className="text-xs text-ink-secondary italic">
                           {analisisMovimientoHoy(s.estatus, eventosUnidadHoy)}

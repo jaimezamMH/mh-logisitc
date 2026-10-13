@@ -10,7 +10,7 @@ import ConfirmZeroCostButton from "@/components/ConfirmZeroCostButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import FotoEquipo from "@/components/FotoEquipo";
 import DocumentosEmbarque from "@/components/DocumentosEmbarque";
-import EstatusTimeline, { type TimelineStep } from "@/components/EstatusTimeline";
+import EstatusTimeline from "@/components/EstatusTimeline";
 import { getShipment, getProveedores } from "@/lib/queries";
 import { esSoloLectura } from "@/lib/auth-server";
 import {
@@ -25,7 +25,7 @@ import {
   deleteShipment,
 } from "@/lib/actions";
 import { ADUANAS, ESTATUS_FLOW, TIPOS_UNIDAD, VENDEDORES, estatusInfo, formatFecha, formatMXN } from "@/lib/constants";
-import { calcularDuracionPorEtapa } from "@/lib/ciclo";
+import { calcularDuracionPorEtapa, calcularTimelineEstatus } from "@/lib/ciclo";
 import { Trash2, Printer } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -61,37 +61,12 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
   );
 
   // Línea de tiempo de arriba de "Mover a la siguiente etapa": fecha en la que se alcanzó cada etapa.
-  const fechaPorEtapa = new Map<string, Date>();
-  for (const ev of [...shipment.statusEvents].sort((a, b) => a.fecha.getTime() - b.fecha.getTime())) {
-    if (!fechaPorEtapa.has(ev.estatusNuevo)) fechaPorEtapa.set(ev.estatusNuevo, ev.fecha);
-  }
-  if (!fechaPorEtapa.has("Pendiente")) {
-    const fallbackInicio = shipment.fechaInicio ?? shipment.createdAt;
-    if (fallbackInicio) fechaPorEtapa.set("Pendiente", fallbackInicio);
-  }
-
-  const cancelado = shipment.estatus === "Cancelado";
-  const flujoPrincipal = ESTATUS_FLOW.filter((e) => e.key !== "Cancelado");
-  const indiceActual = flujoPrincipal.findIndex((e) => e.key === shipment.estatus);
-
-  const timelineSteps: TimelineStep[] = flujoPrincipal.map((e, i) => {
-    const fecha = fechaPorEtapa.get(e.key) ?? null;
-    let estado: TimelineStep["estado"];
-    if (cancelado) estado = fecha ? "completado" : "pendiente";
-    else if (i < indiceActual) estado = "completado";
-    else if (i === indiceActual) estado = "actual";
-    else estado = "pendiente";
-    return { key: e.key, label: e.label, fechaLabel: fecha ? formatFecha(fecha) : null, estado };
-  });
-  if (cancelado) {
-    const fechaCancelado = fechaPorEtapa.get("Cancelado") ?? null;
-    timelineSteps.push({
-      key: "Cancelado",
-      label: "Cancelado",
-      fechaLabel: fechaCancelado ? formatFecha(fechaCancelado) : null,
-      estado: "cancelado",
-    });
-  }
+  const timelineSteps = calcularTimelineEstatus(
+    shipment.statusEvents,
+    shipment.estatus,
+    shipment.fechaInicio,
+    shipment.createdAt
+  );
 
   return (
     <>

@@ -543,6 +543,7 @@ export async function getReporteDiario(fecha: Date = new Date()) {
           orderBy: { createdAt: "desc" },
           take: 3,
         },
+        statusEvents: { select: { estatusNuevo: true, fecha: true } },
       },
     }),
   ]);
