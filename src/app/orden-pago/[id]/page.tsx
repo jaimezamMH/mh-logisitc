@@ -252,7 +252,7 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
           <div className="text-center">
             <div className="border-t border-gray-400 pt-2">
               <p className="text-sm font-medium text-ink-primary">Perla Sanchez</p>
-              <p className="text-xs text-ink-muted">Gte. Admón — Administración</p>
+              <p className="text-xs text-ink-muted">Jefa de Admón — Administración</p>
             </div>
           </div>
         </div>
