@@ -118,17 +118,33 @@ body {
 }
 
 .mh-orbit {
-  animation: mh-orbit-spin 10s linear infinite;
+  animation: mh-orbit-spin 7s linear infinite;
 }
 
 .mh-orbit-counter {
-  animation: mh-orbit-counter-spin 10s linear infinite;
+  animation: mh-orbit-counter-spin 7s linear infinite;
+}
+
+@keyframes mh-electric-ring {
+  0%, 100% {
+    box-shadow: 0 0 10px 1px rgba(56, 189, 248, 0.35), inset 0 0 10px rgba(56, 189, 248, 0.15);
+    border-color: rgba(56, 189, 248, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(56, 189, 248, 0.6), inset 0 0 16px rgba(56, 189, 248, 0.3);
+    border-color: rgba(56, 189, 248, 0.75);
+  }
+}
+
+.mh-electric-ring {
+  animation: mh-electric-ring 2.6s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .mh-earth-spin,
   .mh-orbit,
-  .mh-orbit-counter {
+  .mh-orbit-counter,
+  .mh-electric-ring {
     animation: none;
   }
 }

@@ -17,44 +17,28 @@ import {
 } from "lucide-react";
 import Globe from "@/components/Globe";
 
-// Retroexcavadora (maquinaria amarilla, vista lateral), para que orbite el
-// mundo del menú — dibujada a mano en SVG porque los sets de íconos no
-// traen una retroexcavadora así.
-function ExcavatorIcon({ size = 34, className }: { size?: number; className?: string }) {
+// Cohete con estela, para que "viaje" orbitando el mundo del menú — dibujado
+// a mano en SVG. Apunta hacia la derecha (estela a la izquierda); al no
+// contrarrotar sobre su órbita (ver mh-orbit más abajo), se mantiene siempre
+// apuntando en la dirección del movimiento, como si estuviera en vuelo.
+function RocketIcon({ size = 40, className, trailId }: { size?: number; className?: string; trailId: string }) {
   return (
-    <svg width={size} height={size * 0.68} viewBox="0 0 48 33" className={className} aria-hidden="true">
-      {/* orugas */}
-      <rect x="2" y="25" width="30" height="6" rx="3" fill="#0f2440" />
-      {/* cuerpo / cabina */}
-      <rect x="8" y="13" width="17" height="12" rx="2" fill="currentColor" />
-      <rect x="11" y="16" width="7" height="6" rx="1" fill="#0f2440" opacity="0.5" />
-      {/* brazo trasero (pluma + cucharón) */}
-      <path d="M23 15 L36 9 L32 18 L42 20" stroke="currentColor" strokeWidth="3.2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M42 20 L46 24.5 L39 26.5 Z" fill="currentColor" />
-      {/* pala frontal */}
-      <path d="M8 19 L2 19 L1 23 L8 23 Z" fill="currentColor" opacity="0.85" />
-    </svg>
-  );
-}
-
-// Grúa móvil tipo Grove, roja con blanco (vista lateral), para el otro lado
-// del mundo — también dibujada a mano en SVG.
-function CraneIcon({ size = 46, className }: { size?: number; className?: string }) {
-  return (
-    <svg width={size} height={size * 0.68} viewBox="0 0 48 33" className={className} aria-hidden="true">
-      {/* contrapeso trasero */}
-      <rect x="1" y="12" width="6" height="5" fill="#ffffff" opacity="0.95" />
-      {/* chasis */}
-      <rect x="2" y="16" width="30" height="9" rx="1.5" fill="#dc2626" />
-      {/* cabina */}
-      <rect x="4" y="9" width="10" height="8" rx="1.5" fill="#ffffff" stroke="#dc2626" strokeWidth="1" />
-      {/* pluma telescópica */}
-      <path d="M20 17 L45 3" stroke="#dc2626" strokeWidth="3.6" strokeLinecap="round" />
-      <path d="M20 17 L45 3" stroke="#ffffff" strokeWidth="1.1" strokeLinecap="round" strokeDasharray="2 3.2" />
-      {/* ruedas */}
-      <circle cx="9" cy="27" r="3.4" fill="#0f2440" />
-      <circle cx="18" cy="27" r="3.4" fill="#0f2440" />
-      <circle cx="27" cy="27" r="3.4" fill="#0f2440" />
+    <svg width={size} height={size * 0.4} viewBox="0 0 70 28" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id={trailId} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0.85" />
+        </linearGradient>
+      </defs>
+      {/* estela */}
+      <path d="M0 14 L40 9 L40 19 Z" fill={`url(#${trailId})`} />
+      {/* aletas */}
+      <path d="M42 10 L37 4 L45 9 Z" fill="currentColor" opacity="0.85" />
+      <path d="M42 18 L37 24 L45 19 Z" fill="currentColor" opacity="0.85" />
+      {/* cuerpo */}
+      <path d="M40 14 L58 10 Q67 14 58 18 Z" fill="currentColor" />
+      {/* ventana */}
+      <circle cx="51" cy="14" r="2.3" fill="#0f2440" opacity="0.6" />
     </svg>
   );
 }
@@ -117,17 +101,27 @@ export default function Sidebar({ soloLectura = false }: { soloLectura?: boolean
         })}
       </nav>
 
-      {/* Planeta Tierra girando con maquinaria orbitando — SVG + CSS, sin librerías */}
+      {/* Planeta Tierra girando con "viajes" orbitando en forma de cohete — SVG + CSS, sin librerías */}
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <div className="relative w-36 h-36">
           <Globe size={144} className="shadow-[0_0_32px_rgba(59,130,246,0.35)]" />
-          <div className="absolute -inset-4 rounded-full border border-white/10" />
+          <div className="absolute -inset-4 rounded-full border mh-electric-ring" />
           <div className="absolute inset-0 mh-orbit">
-            <div className="absolute -top-5 left-1/2 -translate-x-1/2 mh-orbit-counter">
-              <ExcavatorIcon size={46} className="text-yellow-400 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
+            {/* en la parte de arriba, la tangente de un giro horario apunta a la derecha */}
+            <div className="absolute -top-5 left-1/2 -translate-x-1/2">
+              <RocketIcon
+                size={42}
+                trailId="mhRocketTrailBlue"
+                className="text-sky-400 drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]"
+              />
             </div>
-            <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 mh-orbit-counter">
-              <CraneIcon size={46} className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" />
+            {/* en la parte de abajo, la tangente apunta a la izquierda: se refleja horizontalmente */}
+            <div className="absolute -bottom-5 left-1/2" style={{ transform: "translateX(-50%) scaleX(-1)" }}>
+              <RocketIcon
+                size={42}
+                trailId="mhRocketTrailOrange"
+                className="text-brand-orange-500 drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]"
+              />
             </div>
           </div>
         </div>
