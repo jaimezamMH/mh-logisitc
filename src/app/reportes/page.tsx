@@ -465,7 +465,7 @@ export default async function ReportesPage({
             <Card>
               <CardHeader
                 title="Equipos en operación"
-                subtitle={`${diario.unidadesEnOperacion.length} unidad${diario.unidadesEnOperacion.length === 1 ? "" : "es"} activas por estatus`}
+                subtitle={`${diario.unidadesEnOperacion.length} unidad${diario.unidadesEnOperacion.length === 1 ? "" : "es"} activas, de la más reciente a la más antigua`}
                 action={<Buscador />}
               />
               {(() => {

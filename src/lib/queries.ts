@@ -532,7 +532,11 @@ export async function getReporteDiario(fecha: Date = new Date()) {
     }),
     prisma.shipment.findMany({
       where: { estatus: { not: "Entregado" } },
-      orderBy: [{ estatus: "asc" }, { updatedAt: "desc" }],
+      // Orden fijo por fecha de ingreso a operación (más reciente arriba) —
+      // antes se ordenaba por updatedAt, que cambiaba el acomodo cada vez que
+      // se tocaba algo de la unidad (comentario, estatus, etc.). Jaime pidió
+      // que el orden no se mueva.
+      orderBy: [{ fechaInicio: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
       include: {
         // Los comentarios por unidad en el cierre diario NO se filtran por
         // hoy a propósito: Jaime los usa como notas que se quedan puestas
