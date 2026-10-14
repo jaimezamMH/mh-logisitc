@@ -219,6 +219,33 @@ export async function getShipment(id: string) {
   });
 }
 
+// Para la ficha pública de seguimiento por cliente (/publico/unidad/[folio]):
+// solo los campos que un cliente externo debería ver — nada de costos,
+// proveedores, datos bancarios ni comentarios internos de Logística.
+export async function getShipmentPublicoByFolio(folio: string) {
+  return prisma.shipment.findUnique({
+    where: { folio },
+    select: {
+      folio: true,
+      equipoDescripcion: true,
+      serie: true,
+      cliente: true,
+      categoria: true,
+      estatus: true,
+      fotoUrl: true,
+      origenCiudad: true,
+      aduana: true,
+      destinoCiudad: true,
+      fechaInicio: true,
+      fechaEntrega: true,
+      fechaSalidaProgramada: true,
+      tiempoCicloDias: true,
+      createdAt: true,
+      statusEvents: { select: { estatusNuevo: true, fecha: true }, orderBy: { fecha: "asc" } },
+    },
+  });
+}
+
 export async function getCotizaciones() {
   return prisma.cotizacion.findMany({
     orderBy: { fecha: "desc" },
