@@ -1,6 +1,7 @@
 import { Card, CardHeader, EmptyState, StatusBadge, SerieTag, ClockBadge } from "@/components/ui";
 import Buscador from "@/components/Buscador";
 import EstatusTimeline from "@/components/EstatusTimeline";
+import EntregasHoyBanner from "@/components/EntregasHoyBanner";
 import { getReporteDiario } from "@/lib/queries";
 import { formatFecha, coincideBusqueda } from "@/lib/constants";
 import { calcularTimelineEstatus } from "@/lib/ciclo";
@@ -43,6 +44,8 @@ export default async function OperacionPublicaPage({
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+        <EntregasHoyBanner entregas={diario.entregasHoy} hrefFor={(s) => `/publico/unidad/${s.folio}`} />
+
         <Card>
           <CardHeader
             title="Equipos en operación"

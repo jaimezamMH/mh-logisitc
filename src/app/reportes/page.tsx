@@ -6,6 +6,7 @@ import PrintButton from "@/components/PrintButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Buscador from "@/components/Buscador";
 import EstatusTimeline from "@/components/EstatusTimeline";
+import EntregasHoyBanner from "@/components/EntregasHoyBanner";
 import { getReporteDiario, getReporteRango } from "@/lib/queries";
 import { formatFecha, formatMXN, coincideBusqueda } from "@/lib/constants";
 import { calcularTimelineEstatus } from "@/lib/ciclo";
@@ -449,6 +450,8 @@ export default async function ReportesPage({
                 </ul>
               )}
             </Card>
+
+            <EntregasHoyBanner entregas={diario.entregasHoy} hrefFor={(s) => `/embarques/${s.id}`} />
 
             <Card>
               <CardHeader
