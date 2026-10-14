@@ -17,63 +17,54 @@ import {
 } from "lucide-react";
 import Globe from "@/components/Globe";
 
-// Cohete con estela, para que "viaje" orbitando el mundo del menú — dibujado
-// a mano en SVG. Apunta hacia la derecha (estela a la izquierda); al no
-// contrarrotar sobre su órbita (ver mh-orbit más abajo), se mantiene siempre
-// apuntando en la dirección del movimiento, como si estuviera en vuelo.
+// Cohete con una estela/rayo grande, para que "viaje" por una ruta curva
+// sobre el mundo del menú — dibujado a mano en SVG. Apunta hacia la derecha
+// (estela a la izquierda). Como viaja sobre un offset-path con
+// offset-rotate: auto (ver RUTAS más abajo), el navegador lo va rotando solo
+// para que siempre apunte en la dirección de la ruta — nunca falla, no hace
+// falta calcular ángulos a mano.
 function RocketIcon({ size = 40, className, trailId }: { size?: number; className?: string; trailId: string }) {
   return (
-    <svg width={size} height={size * 0.4} viewBox="0 0 70 28" className={className} aria-hidden="true">
+    <svg width={size} height={size * 0.42} viewBox="0 0 92 30" className={className} aria-hidden="true">
       <defs>
         <linearGradient id={trailId} x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor="currentColor" stopOpacity="0" />
-          <stop offset="100%" stopColor="currentColor" stopOpacity="0.85" />
+          <stop offset="65%" stopColor="currentColor" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0.95" />
         </linearGradient>
       </defs>
-      {/* estela */}
-      <path d="M0 14 L40 9 L40 19 Z" fill={`url(#${trailId})`} />
+      {/* estela / rayo, bien grande */}
+      <path d="M0 15 L58 7 L58 23 Z" fill={`url(#${trailId})`} />
+      {/* acento de rayo dentro de la estela */}
+      <path
+        d="M4 15 L28 11.5 L20 15 L42 12.5"
+        stroke="#ffffff"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+        opacity="0.6"
+      />
       {/* aletas */}
-      <path d="M42 10 L37 4 L45 9 Z" fill="currentColor" opacity="0.85" />
-      <path d="M42 18 L37 24 L45 19 Z" fill="currentColor" opacity="0.85" />
+      <path d="M60 10 L54 3 L63 8 Z" fill="currentColor" opacity="0.85" />
+      <path d="M60 20 L54 27 L63 22 Z" fill="currentColor" opacity="0.85" />
       {/* cuerpo */}
-      <path d="M40 14 L58 10 Q67 14 58 18 Z" fill="currentColor" />
+      <path d="M58 15 L78 10 Q89 15 78 20 Z" fill="currentColor" />
       {/* ventana */}
-      <circle cx="51" cy="14" r="2.3" fill="#0f2440" opacity="0.6" />
+      <circle cx="70" cy="15" r="2.6" fill="#0f2440" opacity="0.6" />
     </svg>
   );
 }
 
-// Tres cohetes repartidos cada 120° alrededor del mundo. Cada uno vive en su
-// propio "brazo de reloj" (rotación fija de colocación) dentro del contenedor
-// que gira sin parar — así quedan espaciados entre sí y, como ninguno se
-// contrarrota, los tres se mantienen siempre apuntando en la dirección del
-// vuelo durante toda la vuelta.
-const COHETES = [
-  { angle: 0, color: "text-sky-400", trailId: "mhRocketTrailBlue" },
-  { angle: 120, color: "text-brand-orange-500", trailId: "mhRocketTrailOrange" },
-  { angle: 240, color: "text-yellow-400", trailId: "mhRocketTrailYellow" },
+// Tres rutas curvas sobre el mundo, estilo "mapa de vuelos" — cada cohete
+// viaja sobre su propia ruta en bucle, usando offset-path (soportado por
+// todos los navegadores modernos): el navegador se encarga de la posición Y
+// la rotación en cada punto del camino, así nunca se "rompe" el movimiento.
+const RUTAS = [
+  { d: "M10,86 Q72,-6 134,64", color: "text-sky-400", trailId: "mhRocketTrailBlue", duration: 6.5 },
+  { d: "M16,132 Q82,70 128,18", color: "text-brand-orange-500", trailId: "mhRocketTrailOrange", duration: 7.5 },
+  { d: "M22,12 Q58,78 130,124", color: "text-yellow-400", trailId: "mhRocketTrailYellow", duration: 8.5 },
 ];
-// El grupo completo de cohetes orbitando, para dibujarlo igual en las dos
-// capas (atrás/adelante) — así ambas copias quedan siempre en la misma
-// posición exacta y el recorte (clip-path) de cada capa decide cuál mitad se
-// ve de cada una.
-function OrbitingRockets({ capa }: { capa: string }) {
-  return (
-    <div className="absolute inset-0 mh-orbit">
-      {COHETES.map((c) => (
-        <div key={c.angle} className="absolute inset-0" style={{ transform: `rotate(${c.angle}deg)` }}>
-          <div className="absolute top-2 left-1/2 -translate-x-1/2">
-            <RocketIcon
-              size={34}
-              trailId={`${c.trailId}-${capa}`}
-              className={`${c.color} drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]`}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 const NAV = [
   { href: "/", label: "Inicio", icon: LayoutDashboard },
@@ -133,24 +124,43 @@ export default function Sidebar({ soloLectura = false }: { soloLectura?: boolean
         })}
       </nav>
 
-      {/* Planeta Tierra girando con 3 cohetes orbitando, pasando por detrás y
-          por delante del mundo — SVG + CSS, sin librerías. Son DOS capas
-          idénticas de cohetes (misma órbita, mismo reloj): una por detrás del
-          planeta recortada a la mitad de arriba, y otra por delante recortada
-          a la mitad de abajo — así cada cohete se "esconde" de verdad detrás
-          del planeta en la mitad de atrás y se ve completo en la de enfrente. */}
+      {/* Planeta Tierra brilloso con 3 rutas de vuelo curvas, cada una con su
+          propio cohete viajando en bucle — SVG + CSS, sin librerías */}
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <div className="relative w-36 h-36">
-          <div className="absolute inset-0 overflow-hidden" style={{ clipPath: "inset(0 0 50% 0)" }}>
-            <OrbitingRockets capa="atras" />
-          </div>
-
           <Globe size={144} className="relative z-10 shadow-[0_0_32px_rgba(59,130,246,0.35)]" />
           <div className="absolute -inset-4 rounded-full border mh-electric-ring z-10" />
 
-          <div className="absolute inset-0 overflow-hidden z-20" style={{ clipPath: "inset(50% 0 0 0)" }}>
-            <OrbitingRockets capa="enfrente" />
-          </div>
+          {/* las rutas en sí, como líneas de vuelo */}
+          <svg viewBox="0 0 144 144" className="absolute inset-0 z-20 w-full h-full overflow-visible pointer-events-none">
+            {RUTAS.map((r) => (
+              <path
+                key={r.d}
+                d={r.d}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeDasharray="2.5 4"
+                strokeLinecap="round"
+                className={`${r.color} opacity-45`}
+              />
+            ))}
+          </svg>
+
+          {/* los cohetes viajando sobre cada ruta */}
+          {RUTAS.map((r) => (
+            <div
+              key={r.d}
+              className="absolute inset-0 z-20 pointer-events-none mh-fly"
+              style={{
+                offsetPath: `path('${r.d}')`,
+                offsetRotate: "auto",
+                animationDuration: `${r.duration}s`,
+              }}
+            >
+              <RocketIcon size={34} trailId={r.trailId} className={`${r.color} drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]`} />
+            </div>
+          ))}
         </div>
       </div>
 

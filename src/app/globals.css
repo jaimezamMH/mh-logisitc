@@ -99,30 +99,26 @@ body {
   background: transparent;
 }
 
-/* Mundo (estilo planeta Tierra) con maquinaria orbitando, en el espacio vacío del menú lateral */
+/* Mundo (estilo planeta Tierra) con rutas de vuelo, en el espacio vacío del menú lateral */
 @keyframes mh-earth-spin {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
-}
-@keyframes mh-orbit-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-@keyframes mh-orbit-counter-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(-360deg); }
 }
 
 .mh-earth-spin {
   animation: mh-earth-spin 9s linear infinite;
 }
 
-.mh-orbit {
-  animation: mh-orbit-spin 7s linear infinite;
+/* Cohete viajando sobre su ruta (offset-path, definido inline por cohete) */
+@keyframes mh-fly-path {
+  from { offset-distance: 0%; }
+  to { offset-distance: 100%; }
 }
 
-.mh-orbit-counter {
-  animation: mh-orbit-counter-spin 7s linear infinite;
+.mh-fly {
+  animation-name: mh-fly-path;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
 }
 
 @keyframes mh-electric-ring {
@@ -142,8 +138,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .mh-earth-spin,
-  .mh-orbit,
-  .mh-orbit-counter,
+  .mh-fly,
   .mh-electric-ring {
     animation: none;
   }
