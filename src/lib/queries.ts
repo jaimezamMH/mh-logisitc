@@ -192,6 +192,7 @@ export async function getDashboardData() {
     totalCostosActivos,
     costosPorConcepto,
     enAgencia: activos.filter((s) => s.estatus === "Agencia"),
+    enListoParaEntregar: activos.filter((s) => s.estatus === "Listo para entregar"),
     enFleteMexico: activos.filter((s) => s.estatus === "Flete México"),
     recientes: shipments.slice(0, 8),
   };

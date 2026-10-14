@@ -155,9 +155,11 @@ export default async function DashboardPage() {
           </Card>
         )}
 
-        {/* Semáforos: Agencia (rojo, en reparación) y Flete México (verde, en camino a destino) */}
-        {(data.enAgencia.length > 0 || data.enFleteMexico.length > 0) && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Semáforos: Agencia (rojo, en reparación o falta de pago), Listo para
+            entregar (amarillo, detenido por logística o pago, sin falla) y
+            Flete México (verde, en camino a destino) */}
+        {(data.enAgencia.length > 0 || data.enListoParaEntregar.length > 0 || data.enFleteMexico.length > 0) && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {data.enAgencia.length > 0 && (
               <Card className="border-2 border-red-500/60">
                 <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
@@ -182,6 +184,42 @@ export default async function DashboardPage() {
                       >
                         <div className="min-w-0 flex items-center gap-2 flex-wrap">
                           <Wrench size={14} className="text-red-600 shrink-0" />
+                          <span className="text-sm font-medium text-ink-primary truncate">{s.equipoDescripcion}</span>
+                          <span className="text-xs text-ink-muted">{s.cliente}</span>
+                          <SerieTag serie={s.serie} />
+                        </div>
+                        <ClockBadge fechaInicio={s.fechaInicio} fechaEntrega={s.fechaEntrega} tiempoCicloDias={s.tiempoCicloDias} />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
+
+            {data.enListoParaEntregar.length > 0 && (
+              <Card className="border-2 border-yellow-500/60">
+                <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
+                  <span className="relative flex h-3.5 w-3.5 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-yellow-600" />
+                  </span>
+                  <div>
+                    <p className="font-semibold text-yellow-700 text-sm">Listo para entregar</p>
+                    <p className="text-xs text-ink-muted">
+                      Ya resuelto en agencia, pero detenido por logística o pago (no por reparación). {data.enListoParaEntregar.length} unidad
+                      {data.enListoParaEntregar.length === 1 ? "" : "es"}.
+                    </p>
+                  </div>
+                </div>
+                <ul className="divide-y divide-border">
+                  {data.enListoParaEntregar.map((s) => (
+                    <li key={s.id}>
+                      <Link
+                        href={`/embarques/${s.id}`}
+                        className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-yellow-50/60 transition-colors"
+                      >
+                        <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                          <PackageCheck size={14} className="text-yellow-600 shrink-0" />
                           <span className="text-sm font-medium text-ink-primary truncate">{s.equipoDescripcion}</span>
                           <span className="text-xs text-ink-muted">{s.cliente}</span>
                           <SerieTag serie={s.serie} />
