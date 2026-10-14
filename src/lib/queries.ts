@@ -330,22 +330,36 @@ export async function getTiempoPromedioPorEtapa() {
     select: { fechaEntrega: true, statusEvents: { select: { id: true, estatusNuevo: true, fecha: true } } },
   });
 
-  const porEtapa = new Map<string, { suma: number; n: number }>();
+  // "n" (movimientos) solo cuenta los pasos por una etapa que YA TERMINARON
+  // (la unidad avanzó a la siguiente etapa) — de ahí sale el promedio de
+  // días, porque ya se sabe cuánto duró completo. Las unidades que SIGUEN
+  // ahí mismo en este momento (enCurso) no se pueden promediar todavía (no
+  // se sabe cuánto van a durar en total), pero se cuentan aparte en
+  // "enCurso" para que no parezca que "faltan" unidades.
+  const porEtapa = new Map<string, { suma: number; n: number; enCurso: number }>();
   for (const s of shipments) {
     const duraciones = calcularDuracionPorEtapa(s.statusEvents, s.fechaEntrega);
     for (const d of duraciones) {
-      if (d.enCurso) continue; // solo etapas ya concluidas cuentan para el promedio
       if (d.estatus === "Entregado") continue; // etapa final: no "dura", ya se cerró el ciclo
-      const entry = porEtapa.get(d.estatus) ?? { suma: 0, n: 0 };
-      entry.suma += d.dias;
-      entry.n += 1;
+      const entry = porEtapa.get(d.estatus) ?? { suma: 0, n: 0, enCurso: 0 };
+      if (d.enCurso) {
+        entry.enCurso += 1;
+      } else {
+        entry.suma += d.dias;
+        entry.n += 1;
+      }
       porEtapa.set(d.estatus, entry);
     }
   }
 
   return Array.from(porEtapa.entries())
-    .map(([estatus, { suma, n }]) => ({ estatus, promedioDias: Math.round((suma / n) * 10) / 10, n }))
-    .sort((a, b) => b.promedioDias - a.promedioDias);
+    .map(([estatus, { suma, n, enCurso }]) => ({
+      estatus,
+      promedioDias: n > 0 ? Math.round((suma / n) * 10) / 10 : null,
+      n,
+      enCurso,
+    }))
+    .sort((a, b) => (b.promedioDias ?? 0) - (a.promedioDias ?? 0));
 }
 
 export async function getCicloPromedioPorMes() {

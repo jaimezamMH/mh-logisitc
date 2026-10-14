@@ -90,7 +90,10 @@ export default async function AnaliticaPage() {
     getTiempoPromedioPorEtapa(),
   ]);
 
-  const maxEtapaDias = Math.max(1, ...tiempoPorEtapa.map((e) => e.promedioDias));
+  const maxEtapaDias = Math.max(
+    1,
+    ...tiempoPorEtapa.map((e) => e.promedioDias).filter((d): d is number => d != null)
+  );
   const proveedoresFleteUSA = proveedores.filter((p) => p.rol === "Flete USA");
   const proveedoresAgenteAduanal = proveedores.filter((p) => p.rol === "Agente Aduanal");
 
@@ -124,7 +127,7 @@ export default async function AnaliticaPage() {
         <Card>
           <CardHeader
             title="Tiempo promedio por etapa"
-            subtitle="Dónde se detienen más los procesos, según los cambios de estatus capturados en la app"
+            subtitle="Dónde se detienen más los procesos — el promedio solo cuenta unidades que YA salieron de esa etapa; las que siguen ahí mismo en este momento se muestran aparte, como 'en curso', porque todavía no se sabe cuánto van a durar en total"
           />
           <div className="p-5">
             {tiempoPorEtapa.length === 0 ? (
@@ -133,13 +136,18 @@ export default async function AnaliticaPage() {
               <ul className="space-y-3">
                 {tiempoPorEtapa.map((e) => {
                   const info = estatusInfo(e.estatus);
-                  const pct = Math.max(6, (e.promedioDias / maxEtapaDias) * 100);
+                  const pct = e.promedioDias != null ? Math.max(6, (e.promedioDias / maxEtapaDias) * 100) : 0;
                   return (
                     <li key={e.estatus}>
                       <div className="flex items-center justify-between text-sm mb-1">
                         <span className="text-ink-primary font-medium">{info.label}</span>
                         <span className="text-ink-secondary">
-                          {e.promedioDias} día{e.promedioDias === 1 ? "" : "s"} promedio · {e.n} movimiento{e.n === 1 ? "" : "s"}
+                          {e.promedioDias != null
+                            ? `${e.promedioDias} día${e.promedioDias === 1 ? "" : "s"} promedio · ${e.n} ya resuelta${e.n === 1 ? "" : "s"}`
+                            : "Sin promedio todavía"}
+                          {e.enCurso > 0 && (
+                            <span className="text-ink-muted"> · {e.enCurso} en curso ahora</span>
+                          )}
                         </span>
                       </div>
                       <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
