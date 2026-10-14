@@ -8,6 +8,7 @@ export type EstatusKey =
   | "Flete México"
   | "Parking / Patio"
   | "Agencia"
+  | "Listo para entregar"
   | "Entregado"
   | "Cancelado";
 
@@ -71,9 +72,18 @@ export const ESTATUS_FLOW: EstatusInfo[] = [
     descripcion: "En trámite con agencia / a punto de entregar.",
   },
   {
+    key: "Listo para entregar",
+    label: "Listo para entregar",
+    orden: 5,
+    bg: "bg-emerald-100",
+    text: "text-emerald-700",
+    solid: "#059669",
+    descripcion: "Ya resuelto en agencia (reparación o pago) — listo para la entrega final.",
+  },
+  {
     key: "Flete México",
     label: "Flete México",
-    orden: 5,
+    orden: 6,
     bg: "bg-brand-blue-100",
     text: "text-brand-blue-900",
     solid: "#1d4ed8",
@@ -82,7 +92,7 @@ export const ESTATUS_FLOW: EstatusInfo[] = [
   {
     key: "Entregado",
     label: "Entregado",
-    orden: 6,
+    orden: 7,
     bg: "bg-brand-navy",
     text: "text-white",
     solid: "#0f2440",
@@ -91,7 +101,7 @@ export const ESTATUS_FLOW: EstatusInfo[] = [
   {
     key: "Cancelado",
     label: "Cancelado",
-    orden: 7,
+    orden: 8,
     bg: "bg-gray-100",
     text: "text-gray-500",
     solid: "#94a3b8",
@@ -120,6 +130,7 @@ export const ESTATUS_ACTIVOS: EstatusKey[] = [
   "Parking / Patio",
   "Importación / Aduana",
   "Agencia",
+  "Listo para entregar",
   "Flete México",
 ];
 

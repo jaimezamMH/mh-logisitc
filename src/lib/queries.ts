@@ -640,18 +640,25 @@ export async function getReporteRango(from: Date, to: Date) {
     repuveTitulo: costosPorConceptoEntregas.repuveTitulo / n,
   };
 
-  // Ciclo promedio (días) de las unidades entregadas en este periodo.
-  const ciclos = entregas
-    .map((s) => s.tiempoCicloDias ?? diasEnProceso(s.fechaInicio, s.fechaEntrega))
-    .filter((d): d is number => d != null);
-  const cicloPromedioDias = ciclos.length
-    ? Math.round((ciclos.reduce((a, d) => a + d, 0) / ciclos.length) * 10) / 10
-    : null;
-
-  // Desglose por etapa (en qué proceso se atoran más), solo de estas unidades.
+  // Ciclo promedio "logístico" (días) de las unidades entregadas en este
+  // periodo: el tiempo en Agencia (reparación o pago pendiente del cliente,
+  // ya con la unidad en México) NO se cuenta aquí a propósito — no es
+  // responsabilidad de Logística y antes inflaba el promedio. Ese tiempo se
+  // reporta aparte en diasEnAgenciaPromedio. También se arma aquí el
+  // desglose por etapa (en qué proceso se atoran más).
+  const ciclosLogisticos: number[] = [];
+  const diasEnAgenciaPorUnidad: number[] = [];
   const porEtapa = new Map<string, { suma: number; n: number }>();
   for (const s of entregas) {
     const duraciones = calcularDuracionPorEtapa(s.statusEvents, s.fechaEntrega);
+    const diasAgencia = duraciones
+      .filter((d) => d.estatus === "Agencia")
+      .reduce((a, d) => a + d.dias, 0);
+    if (diasAgencia > 0) diasEnAgenciaPorUnidad.push(diasAgencia);
+
+    const totalDias = s.tiempoCicloDias ?? diasEnProceso(s.fechaInicio, s.fechaEntrega);
+    if (totalDias != null) ciclosLogisticos.push(Math.max(0, totalDias - diasAgencia));
+
     for (const d of duraciones) {
       if (d.enCurso || d.estatus === "Entregado") continue;
       const entry = porEtapa.get(d.estatus) ?? { suma: 0, n: 0 };
@@ -660,6 +667,12 @@ export async function getReporteRango(from: Date, to: Date) {
       porEtapa.set(d.estatus, entry);
     }
   }
+  const cicloPromedioDias = ciclosLogisticos.length
+    ? Math.round((ciclosLogisticos.reduce((a, d) => a + d, 0) / ciclosLogisticos.length) * 10) / 10
+    : null;
+  const diasEnAgenciaPromedio = diasEnAgenciaPorUnidad.length
+    ? Math.round((diasEnAgenciaPorUnidad.reduce((a, d) => a + d, 0) / diasEnAgenciaPorUnidad.length) * 10) / 10
+    : null;
   const etapasPromedio = Array.from(porEtapa.entries())
     .map(([estatus, { suma, n }]) => ({ estatus, promedioDias: Math.round((suma / n) * 10) / 10, n }))
     .sort((a, b) => b.promedioDias - a.promedioDias);
@@ -678,6 +691,7 @@ export async function getReporteRango(from: Date, to: Date) {
     proveedoresAgenteAduanal,
     costoPromedioPorConcepto,
     cicloPromedioDias,
+    diasEnAgenciaPromedio,
     etapasPromedio,
   };
 }

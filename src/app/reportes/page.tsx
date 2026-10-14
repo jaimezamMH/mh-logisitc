@@ -168,26 +168,26 @@ function analisisMovimientoHoy(
   return `Hoy avanzó de ${inicial} a ${ultimo.estatusNuevo} (${eventosHoy.length} movimientos en el día).`;
 }
 
-function analisisCiclo(etapasPromedio: { estatus: string; promedioDias: number; n: number }[], cicloPromedioDias: number | null) {
-  const top = etapasPromedio[0];
+function analisisCiclo(etapasPromedio: { estatus: string; promedioDias: number; n: number }[]) {
+  // "Agencia" se queda aparte del ciclo logístico (ver arriba) — se excluye
+  // de este análisis porque ya tiene su propio dato (Promedio en Agencia).
+  // No se calcula "% del ciclo" aquí: el promedio por etapa y el ciclo
+  // logístico promedio se sacan de agrupaciones distintas (por evento vs.
+  // por unidad entregada), así que compararlos como porcentaje puede salir
+  // engañoso con muestras chicas.
+  const candidatos = etapasPromedio.filter((e) => e.estatus !== "Agencia");
+  const top = candidatos[0];
   if (!top) return null;
-  const pct = cicloPromedioDias && cicloPromedioDias > 0 ? Math.round((top.promedioDias / cicloPromedioDias) * 100) : null;
-  let texto = `La etapa que más tiempo tomó fue "${top.estatus}", con un promedio de ${top.promedioDias} días${
-    pct ? ` (~${pct}% del ciclo total)` : ""
-  }.`;
-  if (top.estatus === "Agencia") {
-    texto += " Esto confirma que buena parte del tiempo se va en el taller/reparación antes de la entrega final — ahí es donde conviene enfocar esfuerzos para acortar el ciclo.";
-  } else {
-    texto += " Ahí es donde conviene enfocar esfuerzos para acortar el ciclo total.";
-  }
-  return texto;
+  return `La etapa que más tiempo tomó dentro del ciclo logístico fue "${top.estatus}", con un promedio de ${top.promedioDias} días. Ahí es donde conviene enfocar esfuerzos para acortarlo.`;
 }
 
 function AnalisisDeCiclo({
   cicloPromedioDias,
+  diasEnAgenciaPromedio,
   etapasPromedio,
 }: {
   cicloPromedioDias: number | null;
+  diasEnAgenciaPromedio: number | null;
   etapasPromedio: { estatus: string; promedioDias: number; n: number }[];
 }) {
   return (
@@ -198,9 +198,17 @@ function AnalisisDeCiclo({
           <EmptyState text="No hay unidades entregadas en este periodo para calcular el ciclo." />
         ) : (
           <>
-            <div>
-              <p className="text-3xl font-semibold text-ink-primary">{cicloPromedioDias} días</p>
-              <p className="text-xs text-ink-muted">Ciclo promedio de compra a entrega</p>
+            <div className="flex flex-wrap gap-6">
+              <div>
+                <p className="text-3xl font-semibold text-ink-primary">{cicloPromedioDias} días</p>
+                <p className="text-xs text-ink-muted">Ciclo logístico promedio (compra → listo para entregar)</p>
+              </div>
+              {diasEnAgenciaPromedio != null && (
+                <div>
+                  <p className="text-3xl font-semibold text-brand-orange-600">{diasEnAgenciaPromedio} días</p>
+                  <p className="text-xs text-ink-muted">Promedio en Agencia (reparación o pago del cliente — aparte, no es de Logística)</p>
+                </div>
+              )}
             </div>
 
             {etapasPromedio.length > 0 ? (
@@ -224,7 +232,7 @@ function AnalisisDeCiclo({
                   );
                 })}
                 <p className="text-sm text-ink-secondary bg-surface-muted rounded-lg px-3 py-2.5">
-                  {analisisCiclo(etapasPromedio, cicloPromedioDias)}
+                  {analisisCiclo(etapasPromedio)}
                 </p>
               </div>
             ) : (
@@ -649,7 +657,11 @@ export default async function ReportesPage({
               proveedoresAgenteAduanal={activo.proveedoresAgenteAduanal}
             />
 
-            <AnalisisDeCiclo cicloPromedioDias={activo.cicloPromedioDias} etapasPromedio={activo.etapasPromedio} />
+            <AnalisisDeCiclo
+              cicloPromedioDias={activo.cicloPromedioDias}
+              diasEnAgenciaPromedio={activo.diasEnAgenciaPromedio}
+              etapasPromedio={activo.etapasPromedio}
+            />
 
             <Card>
               <CardHeader title="Unidades entregadas en el periodo" />
