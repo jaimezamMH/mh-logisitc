@@ -56,14 +56,15 @@ function RocketIcon({ size = 40, className, trailId }: { size?: number; classNam
   );
 }
 
-// Tres rutas curvas sobre el mundo, estilo "mapa de vuelos" — cada cohete
-// viaja sobre su propia ruta en bucle, usando offset-path (soportado por
-// todos los navegadores modernos): el navegador se encarga de la posición Y
-// la rotación en cada punto del camino, así nunca se "rompe" el movimiento.
+// Tres órbitas cerradas (elipses completas) alrededor del mundo — cada
+// cohete da la vuelta entera (360°) sin parar, usando offset-path (soportado
+// por todos los navegadores modernos): el navegador se encarga de la
+// posición Y la rotación en cada punto del camino, así nunca se "rompe" el
+// movimiento ni se corta al cerrar la vuelta (son caminos cerrados).
 const RUTAS = [
-  { d: "M10,86 Q72,-6 134,64", color: "text-sky-400", trailId: "mhRocketTrailBlue", duration: 6.5 },
-  { d: "M16,132 Q82,70 128,18", color: "text-brand-orange-500", trailId: "mhRocketTrailOrange", duration: 7.5 },
-  { d: "M22,12 Q58,78 130,124", color: "text-yellow-400", trailId: "mhRocketTrailYellow", duration: 8.5 },
+  { d: "M6,72 A66,40 0 1,0 138,72 A66,40 0 1,0 6,72", color: "text-sky-400", trailId: "mhRocketTrailBlue", duration: 3.5 },
+  { d: "M26,72 A46,66 0 1,0 118,72 A46,66 0 1,0 26,72", color: "text-brand-orange-500", trailId: "mhRocketTrailOrange", duration: 4.2 },
+  { d: "M12,72 A60,60 0 1,0 132,72 A60,60 0 1,0 12,72", color: "text-yellow-400", trailId: "mhRocketTrailYellow", duration: 5 },
 ];
 
 const NAV = [
