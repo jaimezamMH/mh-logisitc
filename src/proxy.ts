@@ -13,6 +13,12 @@ export function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Vista pública de solo lectura (estatus de operación) para compartir con
+  // equipos externos (ej. Ventas) sin que necesiten ninguna clave de acceso.
+  if (pathname.startsWith("/publico")) {
+    return NextResponse.next();
+  }
+
   const rol = rolDesdeCookie(req.cookies.get(AUTH_COOKIE)?.value);
   if (!rol) {
     const url = req.nextUrl.clone();

@@ -9,6 +9,7 @@ import EstatusTimeline from "@/components/EstatusTimeline";
 import { getReporteDiario, getReporteRango } from "@/lib/queries";
 import { formatFecha, formatMXN, coincideBusqueda } from "@/lib/constants";
 import { calcularTimelineEstatus } from "@/lib/ciclo";
+import { analisisMovimientoHoy } from "@/lib/analisis";
 import { createComment, updateComment, deleteComment } from "@/lib/actions";
 import { esSoloLectura } from "@/lib/auth-server";
 
@@ -145,27 +146,6 @@ function CostoPromedio({
       </div>
     </Card>
   );
-}
-
-// Explicación corta y determinística (no IA) de qué pasó hoy con una unidad:
-// si tuvo movimiento(s) de estatus hoy, resume de dónde a dónde; si no, confirma
-// que sigue igual (para que el reporte diario diga algo de cada unidad, no solo
-// de las que se movieron).
-function analisisMovimientoHoy(
-  estatusActual: string,
-  eventosHoy: { estatusAnterior: string | null; estatusNuevo: string }[]
-) {
-  if (eventosHoy.length === 0) {
-    return `Sigue en ${estatusActual}, sin cambios hoy.`;
-  }
-  const primero = eventosHoy[0];
-  const ultimo = eventosHoy[eventosHoy.length - 1];
-  if (eventosHoy.length === 1) {
-    if (!primero.estatusAnterior) return `Se dio de alta hoy, estatus inicial ${primero.estatusNuevo}.`;
-    return `Hoy avanzó de ${primero.estatusAnterior} a ${primero.estatusNuevo}.`;
-  }
-  const inicial = primero.estatusAnterior ?? primero.estatusNuevo;
-  return `Hoy avanzó de ${inicial} a ${ultimo.estatusNuevo} (${eventosHoy.length} movimientos en el día).`;
 }
 
 function analisisCiclo(etapasPromedio: { estatus: string; promedioDias: number; n: number }[]) {
