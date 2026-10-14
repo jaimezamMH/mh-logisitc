@@ -53,7 +53,27 @@ const COHETES = [
   { angle: 120, color: "text-brand-orange-500", trailId: "mhRocketTrailOrange" },
   { angle: 240, color: "text-yellow-400", trailId: "mhRocketTrailYellow" },
 ];
-const ORBIT_SEGUNDOS = 7;
+// El grupo completo de cohetes orbitando, para dibujarlo igual en las dos
+// capas (atrás/adelante) — así ambas copias quedan siempre en la misma
+// posición exacta y el recorte (clip-path) de cada capa decide cuál mitad se
+// ve de cada una.
+function OrbitingRockets({ capa }: { capa: string }) {
+  return (
+    <div className="absolute inset-0 mh-orbit">
+      {COHETES.map((c) => (
+        <div key={c.angle} className="absolute inset-0" style={{ transform: `rotate(${c.angle}deg)` }}>
+          <div className="absolute top-2 left-1/2 -translate-x-1/2">
+            <RocketIcon
+              size={34}
+              trailId={`${c.trailId}-${capa}`}
+              className={`${c.color} drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]`}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const NAV = [
   { href: "/", label: "Inicio", icon: LayoutDashboard },
@@ -114,26 +134,22 @@ export default function Sidebar({ soloLectura = false }: { soloLectura?: boolean
       </nav>
 
       {/* Planeta Tierra girando con 3 cohetes orbitando, pasando por detrás y
-          por delante del mundo — SVG + CSS, sin librerías */}
+          por delante del mundo — SVG + CSS, sin librerías. Son DOS capas
+          idénticas de cohetes (misma órbita, mismo reloj): una por detrás del
+          planeta recortada a la mitad de arriba, y otra por delante recortada
+          a la mitad de abajo — así cada cohete se "esconde" de verdad detrás
+          del planeta en la mitad de atrás y se ve completo en la de enfrente. */}
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <div className="relative w-36 h-36">
+          <div className="absolute inset-0 overflow-hidden" style={{ clipPath: "inset(0 0 50% 0)" }}>
+            <OrbitingRockets capa="atras" />
+          </div>
+
           <Globe size={144} className="relative z-10 shadow-[0_0_32px_rgba(59,130,246,0.35)]" />
           <div className="absolute -inset-4 rounded-full border mh-electric-ring z-10" />
-          <div className="absolute inset-0 mh-orbit">
-            {COHETES.map((c, i) => (
-              <div key={c.angle} className="absolute inset-0" style={{ transform: `rotate(${c.angle}deg)` }}>
-                <div
-                  className="absolute top-2 left-1/2 -translate-x-1/2 mh-orbit-depth"
-                  style={{ animationDelay: `-${(i * ORBIT_SEGUNDOS) / COHETES.length}s` }}
-                >
-                  <RocketIcon
-                    size={34}
-                    trailId={c.trailId}
-                    className={`${c.color} drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]`}
-                  />
-                </div>
-              </div>
-            ))}
+
+          <div className="absolute inset-0 overflow-hidden z-20" style={{ clipPath: "inset(50% 0 0 0)" }}>
+            <OrbitingRockets capa="enfrente" />
           </div>
         </div>
       </div>
