@@ -43,6 +43,18 @@ function RocketIcon({ size = 40, className, trailId }: { size?: number; classNam
   );
 }
 
+// Tres cohetes repartidos cada 120° alrededor del mundo. Cada uno vive en su
+// propio "brazo de reloj" (rotación fija de colocación) dentro del contenedor
+// que gira sin parar — así quedan espaciados entre sí y, como ninguno se
+// contrarrota, los tres se mantienen siempre apuntando en la dirección del
+// vuelo durante toda la vuelta.
+const COHETES = [
+  { angle: 0, color: "text-sky-400", trailId: "mhRocketTrailBlue" },
+  { angle: 120, color: "text-brand-orange-500", trailId: "mhRocketTrailOrange" },
+  { angle: 240, color: "text-yellow-400", trailId: "mhRocketTrailYellow" },
+];
+const ORBIT_SEGUNDOS = 7;
+
 const NAV = [
   { href: "/", label: "Inicio", icon: LayoutDashboard },
   { href: "/operaciones", label: "Operaciones", icon: Truck },
@@ -101,28 +113,27 @@ export default function Sidebar({ soloLectura = false }: { soloLectura?: boolean
         })}
       </nav>
 
-      {/* Planeta Tierra girando con "viajes" orbitando en forma de cohete — SVG + CSS, sin librerías */}
+      {/* Planeta Tierra girando con 3 cohetes orbitando, pasando por detrás y
+          por delante del mundo — SVG + CSS, sin librerías */}
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <div className="relative w-36 h-36">
-          <Globe size={144} className="shadow-[0_0_32px_rgba(59,130,246,0.35)]" />
-          <div className="absolute -inset-4 rounded-full border mh-electric-ring" />
+          <Globe size={144} className="relative z-10 shadow-[0_0_32px_rgba(59,130,246,0.35)]" />
+          <div className="absolute -inset-4 rounded-full border mh-electric-ring z-10" />
           <div className="absolute inset-0 mh-orbit">
-            {/* en la parte de arriba, la tangente de un giro horario apunta a la derecha */}
-            <div className="absolute -top-5 left-1/2 -translate-x-1/2">
-              <RocketIcon
-                size={42}
-                trailId="mhRocketTrailBlue"
-                className="text-sky-400 drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]"
-              />
-            </div>
-            {/* en la parte de abajo, la tangente apunta a la izquierda: se refleja horizontalmente */}
-            <div className="absolute -bottom-5 left-1/2" style={{ transform: "translateX(-50%) scaleX(-1)" }}>
-              <RocketIcon
-                size={42}
-                trailId="mhRocketTrailOrange"
-                className="text-brand-orange-500 drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]"
-              />
-            </div>
+            {COHETES.map((c, i) => (
+              <div key={c.angle} className="absolute inset-0" style={{ transform: `rotate(${c.angle}deg)` }}>
+                <div
+                  className="absolute top-2 left-1/2 -translate-x-1/2 mh-orbit-depth"
+                  style={{ animationDelay: `-${(i * ORBIT_SEGUNDOS) / COHETES.length}s` }}
+                >
+                  <RocketIcon
+                    size={34}
+                    trailId={c.trailId}
+                    className={`${c.color} drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]`}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

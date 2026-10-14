@@ -140,11 +140,27 @@ body {
   animation: mh-electric-ring 2.6s ease-in-out infinite;
 }
 
+/* Profundidad de los cohetes al orbitar: cuando van por la mitad "de atrás"
+   del círculo pasan por detrás del mundo (z-index bajo, el planeta los tapa);
+   al cruzar a la mitad "de enfrente" pasan por delante (z-index alto). El
+   z-index puede animarse en saltos, así que no hace falta JS para esto. */
+@keyframes mh-orbit-depth {
+  0%, 24.9% { z-index: 5; }
+  25%, 74.9% { z-index: 20; }
+  75%, 100% { z-index: 5; }
+}
+
+.mh-orbit-depth {
+  z-index: 20;
+  animation: mh-orbit-depth 7s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mh-earth-spin,
   .mh-orbit,
   .mh-orbit-counter,
-  .mh-electric-ring {
+  .mh-electric-ring,
+  .mh-orbit-depth {
     animation: none;
   }
 }
