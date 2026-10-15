@@ -14,9 +14,12 @@ export interface EntregaHoy {
 }
 
 // Tarjeta destacada de las entregas cerradas HOY — "la victoria del día".
-// Se usa igual en /reportes (dirección) y en /publico/operacion (equipo de
-// ventas); cada quien pasa su propio hrefFor() para que el link de cada
-// unidad entregada vaya a la ficha correcta según dónde se esté mostrando.
+// "Hoy" se calcula en getReporteDiario() con startOfLocalDay/endOfLocalDay
+// (queries.ts), que usa la hora real de Baja California (America/Tijuana),
+// no la del servidor. Se usa igual en /reportes (dirección) y en
+// /publico/operacion (equipo de ventas); cada quien pasa su propio hrefFor()
+// para que el link de cada unidad entregada vaya a la ficha correcta según
+// dónde se esté mostrando.
 export default function EntregasHoyBanner({
   entregas,
   hrefFor,

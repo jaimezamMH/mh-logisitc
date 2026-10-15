@@ -16,24 +16,57 @@ function endOfDay(d: Date) {
   return x;
 }
 
-// "Hoy" en hora LOCAL del servidor — a diferencia de startOfDay/endOfDay de
-// arriba (UTC, para fechas "solo día"), esto es para comparar contra
-// timestamps REALES (fechaGenerada de una orden, fecha de un StatusEvent/
-// Comment, fechaRecordatorio). Usar la versión UTC ahí era un bug real: el
-// servidor corre en hora de México (UTC-7/UTC-6), así que después de las
-// ~17-18h locales el día en UTC ya cambió al de mañana mientras localmente
-// sigue siendo "hoy" — con startOfDay/endOfDay (UTC) esas horas de la tarde
-// quedaban fuera del rango de "hoy" y los reportes/recordatorios del día
-// parecían vacíos aunque sí hubiera movimientos.
+// "Hoy" en hora de Baja California (Tijuana/Mexicali, donde está Jaime) — a
+// diferencia de startOfDay/endOfDay de arriba (UTC, para fechas "solo día"),
+// esto es para comparar contra timestamps REALES (fechaGenerada de una
+// orden, fecha de un StatusEvent/Comment, fechaRecordatorio).
+//
+// OJO: `new Date().setHours(0,0,0,0)` NO sirve para esto en producción —
+// usa la zona horaria del SERVIDOR, y Vercel corre sus funciones en UTC sin
+// importar dónde esté Jaime. Con eso, la "medianoche" quedaba 7-8 horas
+// corrida de la medianoche real de Baja California, así que cosas que
+// pasaban en la tarde/noche de Jaime parecían "ya del día siguiente" (o
+// viceversa) para el sistema. Por eso aquí se calcula la medianoche real en
+// la zona horaria del negocio con Intl.DateTimeFormat (sin necesitar ninguna
+// librería de fechas), sin importar en qué zona corra el servidor.
+const ZONA_HORARIA_NEGOCIO = "America/Tijuana"; // Baja California
+
+function zonaHorariaAUtc(y: number, mes: number, dia: number, hora: number, min: number, seg: number, zona: string) {
+  // Interpreta Y-M-D H:M:S como si fuera hora de `zona` y regresa el Date UTC
+  // equivalente. Método de "adivinar y corregir": se arma un Date asumiendo
+  // UTC, se ve qué hora de pared le corresponde en `zona`, y se corrige la
+  // diferencia (así se obtiene el offset real de esa zona en esa fecha,
+  // incluyendo horario de verano, sin tener que calcularlo a mano).
+  const intento = new Date(Date.UTC(y, mes - 1, dia, hora, min, seg));
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: zona,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(intento);
+  const valor = (tipo: string) => Number(partes.find((p) => p.type === tipo)!.value);
+  const horaPared = valor("hour") === 24 ? 0 : valor("hour");
+  const comoSiFueraUtc = Date.UTC(valor("year"), valor("month") - 1, valor("day"), horaPared, valor("minute"), valor("second"));
+  const diferencia = comoSiFueraUtc - intento.getTime();
+  return new Date(intento.getTime() - diferencia);
+}
+
 function startOfLocalDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: ZONA_HORARIA_NEGOCIO,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const valor = (tipo: string) => Number(partes.find((p) => p.type === tipo)!.value);
+  return zonaHorariaAUtc(valor("year"), valor("month"), valor("day"), 0, 0, 0, ZONA_HORARIA_NEGOCIO);
 }
 function endOfLocalDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(23, 59, 59, 999);
-  return x;
+  return new Date(startOfLocalDay(d).getTime() + 24 * 60 * 60 * 1000 - 1);
 }
 
 type ConCostos = {
