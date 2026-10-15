@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -14,9 +15,26 @@ import {
   Handshake,
   Building2,
   Eye,
-  Zap,
 } from "lucide-react";
 import Globe from "@/components/Globe";
+
+// Arco de electricidad (zigzag), para formar un anillo de electricidad MÁS
+// GRANDE que el propio mundo, recorriéndolo alrededor — blanco con brillo
+// azul, no un ícono de rayo suelto encima.
+function ArcoElectrico({ className, style }: { className?: string; style?: CSSProperties }) {
+  return (
+    <svg width="34" height="14" viewBox="0 0 34 14" className={className} style={style} aria-hidden="true">
+      <path
+        d="M1,7 L9,2 L13,9 L21,3 L25,10 L33,6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 // Cohete con una estela/rayo grande, para que "viaje" por una ruta curva
 // sobre el mundo del menú — dibujado a mano en SVG. Apunta hacia la derecha
@@ -68,15 +86,17 @@ const RUTAS = [
   { d: "M12,72 A60,60 0 1,0 132,72 A60,60 0 1,0 12,72", color: "text-yellow-400", trailId: "mhRocketTrailYellow", duration: 5 },
 ];
 
-// Rayos que relampaguean sobre el mundo — cada uno "destella" (doble
-// parpadeo breve, como un rayo real) en un momento distinto gracias a un
-// animation-delay distinto, así nunca se ven sincronizados, se siente más
-// como una tormenta real que como un efecto repetitivo.
-const RAYOS = [
-  { top: "4%", left: "58%", size: 26, rotate: -8, duration: 4.5, delay: 0 },
-  { top: "58%", left: "10%", size: 20, rotate: 14, duration: 5.2, delay: -1.8 },
-  { top: "30%", left: "78%", size: 22, rotate: -18, duration: 6, delay: -3.4 },
-];
+// Anillo de 5 arcos de electricidad repartidos cada 72° — con el mismo
+// truco de "manecilla de reloj" que los cohetes (cada uno en su propio
+// brazo rotado), así quedan tangentes al círculo sin calcular ángulos a
+// mano. El radio (104px) es mayor al del mundo (72px de radio), así el
+// anillo completo se ve más grande que el planeta. Cada arco tiene su
+// propio parpadeo (crepitar eléctrico) con duración/delay distintos.
+const ARCOS_ELECTRICOS = [0, 72, 144, 216, 288].map((angle, i) => ({
+  angle,
+  crackleDuration: 0.8 + i * 0.22,
+  crackleDelay: -(i * 0.37),
+}));
 
 const NAV = [
   { href: "/", label: "Inicio", icon: LayoutDashboard },
@@ -178,23 +198,25 @@ export default function Sidebar({ soloLectura = false }: { soloLectura?: boolean
             </div>
           ))}
 
-          {/* rayos que relampaguean sobre el mundo, como una tormenta real */}
-          {RAYOS.map((rayo, i) => (
-            <Zap
-              key={i}
-              size={rayo.size}
-              className="absolute z-30 text-yellow-300 fill-yellow-300 mh-lightning-flash pointer-events-none"
-              style={{
-                top: rayo.top,
-                left: rayo.left,
-                transform: `rotate(${rayo.rotate}deg)`,
-                animationDuration: `${rayo.duration}s`,
-                animationDelay: `${rayo.delay}s`,
-                filter:
-                  "drop-shadow(0 0 4px rgba(254,240,138,0.95)) drop-shadow(0 0 12px rgba(250,204,21,0.75)) drop-shadow(0 0 22px rgba(234,179,8,0.5))",
-              }}
-            />
-          ))}
+          {/* anillo de electricidad blanco-azul, más grande que el mundo,
+              recorriéndolo alrededor sin parar */}
+          <div className="absolute inset-0 z-30 pointer-events-none mh-arc-ring" style={{ animationDuration: "13s" }}>
+            {ARCOS_ELECTRICOS.map((arco) => (
+              <div key={arco.angle} className="absolute inset-0" style={{ transform: `rotate(${arco.angle}deg)` }}>
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2">
+                  <ArcoElectrico
+                    className="text-white mh-arc-crackle"
+                    style={{
+                      animationDuration: `${arco.crackleDuration}s`,
+                      animationDelay: `${arco.crackleDelay}s`,
+                      filter:
+                        "drop-shadow(0 0 3px #ffffff) drop-shadow(0 0 8px #7dd3fc) drop-shadow(0 0 16px #38bdf8) drop-shadow(0 0 26px #0ea5e9)",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

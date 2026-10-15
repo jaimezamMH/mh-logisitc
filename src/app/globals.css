@@ -157,20 +157,34 @@ body {
   animation: mh-electric-ring 2.6s ease-in-out infinite;
 }
 
-/* Rayos que relampaguean sobre el mundo del menú — doble destello breve
-   (como un rayo real) y luego una pausa larga antes del siguiente. Cada
-   rayo usa su propia duración/delay (inline) para que no se vean
-   sincronizados entre sí. */
-@keyframes mh-lightning-flash {
-  0%, 85%, 100% { opacity: 0; }
-  86% { opacity: 1; }
-  88% { opacity: 0.15; }
-  90% { opacity: 1; }
-  93% { opacity: 0; }
+/* Anillo de electricidad alrededor del mundo del menú — el anillo completo
+   (los 5 arcos juntos) gira despacio recorriendo el mundo. */
+@keyframes mh-arc-ring-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-.mh-lightning-flash {
-  animation-name: mh-lightning-flash;
+.mh-arc-ring {
+  animation-name: mh-arc-ring-spin;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* Cada arco "crepita" (parpadeo irregular, no una pulsación suave) con su
+   propia duración/delay para que no se vean sincronizados entre sí, como
+   electricidad de verdad recorriendo el anillo. */
+@keyframes mh-arc-crackle {
+  0%, 100% { opacity: 0.25; }
+  10% { opacity: 0.9; }
+  20% { opacity: 0.3; }
+  35% { opacity: 1; }
+  50% { opacity: 0.2; }
+  65% { opacity: 0.85; }
+  80% { opacity: 0.35; }
+}
+
+.mh-arc-crackle {
+  animation-name: mh-arc-crackle;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
@@ -179,7 +193,8 @@ body {
   .mh-earth-spin,
   .mh-fly,
   .mh-electric-ring,
-  .mh-lightning-flash {
+  .mh-arc-ring,
+  .mh-arc-crackle {
     animation: none;
   }
 }
