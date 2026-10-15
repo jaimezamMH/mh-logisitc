@@ -130,7 +130,11 @@ export default function Sidebar({ soloLectura = false }: { soloLectura?: boolean
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <div className="relative w-36 h-36">
           <Globe size={144} className="relative z-10 shadow-[0_0_32px_rgba(59,130,246,0.35)]" />
-          <div className="absolute -inset-4 rounded-full border mh-electric-ring z-10" />
+          {/* anillo blanco inclinado, estilo globo terráqueo de escritorio */}
+          <div
+            className="absolute -inset-1 rounded-full border-[3px] border-white/90 z-10 pointer-events-none"
+            style={{ transform: "rotate(-20deg) scaleY(0.38)" }}
+          />
 
           {/* las rutas en sí, como líneas de vuelo */}
           <svg viewBox="0 0 144 144" className="absolute inset-0 z-20 w-full h-full overflow-visible pointer-events-none">

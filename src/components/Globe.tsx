@@ -4,7 +4,7 @@
 // infinito para que se vea como si el planeta estuviera girando.
 function Continentes({ x = 0 }: { x?: number }) {
   return (
-    <g transform={`translate(${x},0)`} fill="#f6b73c" stroke="#c9881f" strokeWidth="1.2" strokeLinejoin="round">
+    <g transform={`translate(${x},0)`} fill="#4ade80" stroke="#166534" strokeWidth="1.2" strokeLinejoin="round">
       {/* Norteamérica (EUA, México, Canadá) — silueta reconocible, no un óvalo
           genérico: Canadá ancho arriba, Florida como puntita a la derecha,
           México angostándose hasta Centroamérica abajo */}
@@ -31,7 +31,7 @@ export default function Globe({ size = 144, className = "" }: { size?: number; c
         width: size,
         height: size,
         background:
-          "radial-gradient(circle at 32% 28%, #7dd3fc 0%, #38bdf8 32%, #0ea5e9 58%, #0369a1 85%, #075985 100%)",
+          "radial-gradient(circle at 32% 28%, #93d5f6 0%, #4db3ec 30%, #2e9bdc 58%, #1a6fa8 85%, #0f4f7a 100%)",
       }}
     >
       <div className="absolute inset-0 mh-earth-spin" style={{ width: "200%", height: "100%" }}>
