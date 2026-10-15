@@ -157,23 +157,10 @@ body {
   animation: mh-electric-ring 2.6s ease-in-out infinite;
 }
 
-/* Camión de plataforma circulando sin parar por la carretera, debajo del
-   mundo del menú — un solo recorrido de lado a lado, empieza y termina
-   fuera de la vista así nunca se nota el reinicio. */
-@keyframes mh-truck-drive {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(145%); }
-}
-
-.mh-truck-drive {
-  animation: mh-truck-drive 9s linear infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .mh-earth-spin,
   .mh-fly,
-  .mh-electric-ring,
-  .mh-truck-drive {
+  .mh-electric-ring {
     animation: none;
   }
 }

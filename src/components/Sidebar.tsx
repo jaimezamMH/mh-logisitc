@@ -17,44 +17,6 @@ import {
 } from "lucide-react";
 import Globe from "@/components/Globe";
 
-// Camión de plataforma (cama baja / lowboy) con una retroexcavadora amarilla
-// encima, vista lateral — dibujado a mano en SVG, como el que mandó Jaime de
-// referencia: cabina roja, plataforma baja con varias llantas, y la
-// retroexcavadora amarilla montada atrás.
-function CamionPlataforma({ className }: { className?: string }) {
-  return (
-    <svg width="210" height="56" viewBox="0 0 210 56" className={className} aria-hidden="true">
-      {/* plataforma baja */}
-      <path d="M48,38 L54,28 L198,28 L198,38 Z" fill="#7f1d1d" />
-      <path d="M48,38 L198,38 L198,41 L48,41 Z" fill="#450a0a" />
-      {/* llantas de la plataforma */}
-      {[70, 85, 150, 165, 180].map((cx) => (
-        <circle key={cx} cx={cx} cy="46" r="7" fill="#111827" />
-      ))}
-      {[70, 85, 150, 165, 180].map((cx) => (
-        <circle key={`${cx}-h`} cx={cx} cy="46" r="2.6" fill="#4b5563" />
-      ))}
-
-      {/* retroexcavadora amarilla, montada sobre la plataforma */}
-      <g transform="translate(92,0)">
-        <rect x="0" y="20" width="34" height="8" rx="1.5" fill="#0f2440" />
-        <rect x="3" y="8" width="26" height="13" rx="2" fill="#facc15" />
-        <rect x="5" y="10" width="10" height="7" rx="1" fill="#0f2440" opacity="0.55" />
-        <path d="M23,12 L38,3 L34,15 L46,17" stroke="#facc15" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M46,17 L50,22 L43,24 Z" fill="#facc15" />
-      </g>
-
-      {/* cabina del camión */}
-      <path d="M2,20 L2,38 L46,38 L46,24 L30,24 L26,14 L6,14 Q2,14 2,20 Z" fill="#dc2626" />
-      <path d="M8,17 L23,17 L25,24 L8,24 Z" fill="#bfe4ff" />
-      <circle cx="12" cy="46" r="8" fill="#111827" />
-      <circle cx="12" cy="46" r="3" fill="#4b5563" />
-      <circle cx="34" cy="46" r="8" fill="#111827" />
-      <circle cx="34" cy="46" r="3" fill="#4b5563" />
-    </svg>
-  );
-}
-
 // Cohete con una estela/rayo grande, para que "viaje" por una ruta curva
 // sobre el mundo del menú — dibujado a mano en SVG. Apunta hacia la derecha
 // (estela a la izquierda). Como viaja sobre un offset-path con
@@ -204,22 +166,6 @@ export default function Sidebar({ soloLectura = false }: { soloLectura?: boolean
               <RocketIcon size={34} trailId={r.trailId} className={`${r.color} drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]`} />
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Carretera con el camión de plataforma (retroexcavadora amarilla
-          atrás) circulando sin parar, debajo del mundo */}
-      <div className="px-4 pb-3 shrink-0">
-        <div className="relative h-16 rounded-lg overflow-hidden bg-[#1a2436] border border-white/10">
-          <div className="absolute inset-x-0 bottom-4 h-2 bg-gray-500/70" />
-          <div className="absolute inset-x-0 bottom-[19px] h-[3px] flex gap-3 px-1">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <span key={i} className="flex-1 bg-yellow-300/70 rounded-full" />
-            ))}
-          </div>
-          <div className="absolute bottom-3 left-0 mh-truck-drive">
-            <CamionPlataforma className="h-11 w-auto drop-shadow-[0_3px_4px_rgba(0,0,0,0.45)]" />
-          </div>
         </div>
       </div>
 
