@@ -157,26 +157,10 @@ body {
   animation: mh-electric-ring 2.6s ease-in-out infinite;
 }
 
-/* Estrella fugaz cruzando el mundo del menú — la mayor parte del ciclo de
-   3s está invisible y quieta; en una ventana breve hacia el final aparece,
-   cruza en diagonal, y se apaga, lista para repetirse. */
-@keyframes mh-shooting-star {
-  0%, 62% { opacity: 0; transform: rotate(25deg) translate(0, 0); }
-  64% { opacity: 1; }
-  80% { opacity: 1; transform: rotate(25deg) translate(120px, 56px); }
-  84% { opacity: 0; transform: rotate(25deg) translate(120px, 56px); }
-  100% { opacity: 0; transform: rotate(25deg) translate(0, 0); }
-}
-
-.mh-shooting-star {
-  animation: mh-shooting-star 3s ease-in infinite;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .mh-earth-spin,
   .mh-fly,
-  .mh-electric-ring,
-  .mh-shooting-star {
+  .mh-electric-ring {
     animation: none;
   }
 }
