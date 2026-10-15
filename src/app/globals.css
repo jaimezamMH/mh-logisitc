@@ -157,44 +157,23 @@ body {
   animation: mh-electric-ring 2.6s ease-in-out infinite;
 }
 
-/* Anillo de electricidad alrededor del mundo del menú — el anillo completo
-   (los 5 arcos juntos) gira despacio recorriendo el mundo. */
-@keyframes mh-arc-ring-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+/* Camión de plataforma circulando sin parar por la carretera, debajo del
+   mundo del menú — un solo recorrido de lado a lado, empieza y termina
+   fuera de la vista así nunca se nota el reinicio. */
+@keyframes mh-truck-drive {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(145%); }
 }
 
-.mh-arc-ring {
-  animation-name: mh-arc-ring-spin;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-
-/* Cada arco "crepita" (parpadeo irregular, no una pulsación suave) con su
-   propia duración/delay para que no se vean sincronizados entre sí, como
-   electricidad de verdad recorriendo el anillo. */
-@keyframes mh-arc-crackle {
-  0%, 100% { opacity: 0.25; }
-  10% { opacity: 0.9; }
-  20% { opacity: 0.3; }
-  35% { opacity: 1; }
-  50% { opacity: 0.2; }
-  65% { opacity: 0.85; }
-  80% { opacity: 0.35; }
-}
-
-.mh-arc-crackle {
-  animation-name: mh-arc-crackle;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
+.mh-truck-drive {
+  animation: mh-truck-drive 9s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .mh-earth-spin,
   .mh-fly,
   .mh-electric-ring,
-  .mh-arc-ring,
-  .mh-arc-crackle {
+  .mh-truck-drive {
     animation: none;
   }
 }

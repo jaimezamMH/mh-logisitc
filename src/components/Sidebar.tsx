@@ -1,6 +1,5 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -18,20 +17,40 @@ import {
 } from "lucide-react";
 import Globe from "@/components/Globe";
 
-// Arco de electricidad (zigzag), para formar un anillo de electricidad MÁS
-// GRANDE que el propio mundo, recorriéndolo alrededor — blanco con brillo
-// azul, no un ícono de rayo suelto encima.
-function ArcoElectrico({ className, style }: { className?: string; style?: CSSProperties }) {
+// Camión de plataforma (cama baja / lowboy) con una retroexcavadora amarilla
+// encima, vista lateral — dibujado a mano en SVG, como el que mandó Jaime de
+// referencia: cabina roja, plataforma baja con varias llantas, y la
+// retroexcavadora amarilla montada atrás.
+function CamionPlataforma({ className }: { className?: string }) {
   return (
-    <svg width="34" height="14" viewBox="0 0 34 14" className={className} style={style} aria-hidden="true">
-      <path
-        d="M1,7 L9,2 L13,9 L21,3 L25,10 L33,6"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg width="210" height="56" viewBox="0 0 210 56" className={className} aria-hidden="true">
+      {/* plataforma baja */}
+      <path d="M48,38 L54,28 L198,28 L198,38 Z" fill="#7f1d1d" />
+      <path d="M48,38 L198,38 L198,41 L48,41 Z" fill="#450a0a" />
+      {/* llantas de la plataforma */}
+      {[70, 85, 150, 165, 180].map((cx) => (
+        <circle key={cx} cx={cx} cy="46" r="7" fill="#111827" />
+      ))}
+      {[70, 85, 150, 165, 180].map((cx) => (
+        <circle key={`${cx}-h`} cx={cx} cy="46" r="2.6" fill="#4b5563" />
+      ))}
+
+      {/* retroexcavadora amarilla, montada sobre la plataforma */}
+      <g transform="translate(92,0)">
+        <rect x="0" y="20" width="34" height="8" rx="1.5" fill="#0f2440" />
+        <rect x="3" y="8" width="26" height="13" rx="2" fill="#facc15" />
+        <rect x="5" y="10" width="10" height="7" rx="1" fill="#0f2440" opacity="0.55" />
+        <path d="M23,12 L38,3 L34,15 L46,17" stroke="#facc15" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M46,17 L50,22 L43,24 Z" fill="#facc15" />
+      </g>
+
+      {/* cabina del camión */}
+      <path d="M2,20 L2,38 L46,38 L46,24 L30,24 L26,14 L6,14 Q2,14 2,20 Z" fill="#dc2626" />
+      <path d="M8,17 L23,17 L25,24 L8,24 Z" fill="#bfe4ff" />
+      <circle cx="12" cy="46" r="8" fill="#111827" />
+      <circle cx="12" cy="46" r="3" fill="#4b5563" />
+      <circle cx="34" cy="46" r="8" fill="#111827" />
+      <circle cx="34" cy="46" r="3" fill="#4b5563" />
     </svg>
   );
 }
@@ -85,18 +104,6 @@ const RUTAS = [
   { d: "M26,72 A46,66 0 1,0 118,72 A46,66 0 1,0 26,72", color: "text-brand-orange-500", trailId: "mhRocketTrailOrange", duration: 4.2 },
   { d: "M12,72 A60,60 0 1,0 132,72 A60,60 0 1,0 12,72", color: "text-yellow-400", trailId: "mhRocketTrailYellow", duration: 5 },
 ];
-
-// Anillo de 5 arcos de electricidad repartidos cada 72° — con el mismo
-// truco de "manecilla de reloj" que los cohetes (cada uno en su propio
-// brazo rotado), así quedan tangentes al círculo sin calcular ángulos a
-// mano. El radio (104px) es mayor al del mundo (72px de radio), así el
-// anillo completo se ve más grande que el planeta. Cada arco tiene su
-// propio parpadeo (crepitar eléctrico) con duración/delay distintos.
-const ARCOS_ELECTRICOS = [0, 72, 144, 216, 288].map((angle, i) => ({
-  angle,
-  crackleDuration: 0.8 + i * 0.22,
-  crackleDelay: -(i * 0.37),
-}));
 
 const NAV = [
   { href: "/", label: "Inicio", icon: LayoutDashboard },
@@ -197,25 +204,21 @@ export default function Sidebar({ soloLectura = false }: { soloLectura?: boolean
               <RocketIcon size={34} trailId={r.trailId} className={`${r.color} drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]`} />
             </div>
           ))}
+        </div>
+      </div>
 
-          {/* anillo de electricidad blanco-azul, más grande que el mundo,
-              recorriéndolo alrededor sin parar */}
-          <div className="absolute inset-0 z-30 pointer-events-none mh-arc-ring" style={{ animationDuration: "13s" }}>
-            {ARCOS_ELECTRICOS.map((arco) => (
-              <div key={arco.angle} className="absolute inset-0" style={{ transform: `rotate(${arco.angle}deg)` }}>
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2">
-                  <ArcoElectrico
-                    className="text-white mh-arc-crackle"
-                    style={{
-                      animationDuration: `${arco.crackleDuration}s`,
-                      animationDelay: `${arco.crackleDelay}s`,
-                      filter:
-                        "drop-shadow(0 0 3px #ffffff) drop-shadow(0 0 8px #7dd3fc) drop-shadow(0 0 16px #38bdf8) drop-shadow(0 0 26px #0ea5e9)",
-                    }}
-                  />
-                </div>
-              </div>
+      {/* Carretera con el camión de plataforma (retroexcavadora amarilla
+          atrás) circulando sin parar, debajo del mundo */}
+      <div className="px-4 pb-3 shrink-0">
+        <div className="relative h-16 rounded-lg overflow-hidden bg-[#1a2436] border border-white/10">
+          <div className="absolute inset-x-0 bottom-4 h-2 bg-gray-500/70" />
+          <div className="absolute inset-x-0 bottom-[19px] h-[3px] flex gap-3 px-1">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <span key={i} className="flex-1 bg-yellow-300/70 rounded-full" />
             ))}
+          </div>
+          <div className="absolute bottom-3 left-0 mh-truck-drive">
+            <CamionPlataforma className="h-11 w-auto drop-shadow-[0_3px_4px_rgba(0,0,0,0.45)]" />
           </div>
         </div>
       </div>
