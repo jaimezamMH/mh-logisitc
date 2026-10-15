@@ -157,10 +157,29 @@ body {
   animation: mh-electric-ring 2.6s ease-in-out infinite;
 }
 
+/* Rayos que relampaguean sobre el mundo del menú — doble destello breve
+   (como un rayo real) y luego una pausa larga antes del siguiente. Cada
+   rayo usa su propia duración/delay (inline) para que no se vean
+   sincronizados entre sí. */
+@keyframes mh-lightning-flash {
+  0%, 85%, 100% { opacity: 0; }
+  86% { opacity: 1; }
+  88% { opacity: 0.15; }
+  90% { opacity: 1; }
+  93% { opacity: 0; }
+}
+
+.mh-lightning-flash {
+  animation-name: mh-lightning-flash;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mh-earth-spin,
   .mh-fly,
-  .mh-electric-ring {
+  .mh-electric-ring,
+  .mh-lightning-flash {
     animation: none;
   }
 }

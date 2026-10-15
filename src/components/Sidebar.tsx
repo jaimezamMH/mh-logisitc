@@ -14,6 +14,7 @@ import {
   Handshake,
   Building2,
   Eye,
+  Zap,
 } from "lucide-react";
 import Globe from "@/components/Globe";
 
@@ -65,6 +66,16 @@ const RUTAS = [
   { d: "M6,72 A66,40 0 1,0 138,72 A66,40 0 1,0 6,72", color: "text-sky-400", trailId: "mhRocketTrailBlue", duration: 3.5 },
   { d: "M26,72 A46,66 0 1,0 118,72 A46,66 0 1,0 26,72", color: "text-brand-orange-500", trailId: "mhRocketTrailOrange", duration: 4.2 },
   { d: "M12,72 A60,60 0 1,0 132,72 A60,60 0 1,0 12,72", color: "text-yellow-400", trailId: "mhRocketTrailYellow", duration: 5 },
+];
+
+// Rayos que relampaguean sobre el mundo — cada uno "destella" (doble
+// parpadeo breve, como un rayo real) en un momento distinto gracias a un
+// animation-delay distinto, así nunca se ven sincronizados, se siente más
+// como una tormenta real que como un efecto repetitivo.
+const RAYOS = [
+  { top: "4%", left: "58%", size: 26, rotate: -8, duration: 4.5, delay: 0 },
+  { top: "58%", left: "10%", size: 20, rotate: 14, duration: 5.2, delay: -1.8 },
+  { top: "30%", left: "78%", size: 22, rotate: -18, duration: 6, delay: -3.4 },
 ];
 
 const NAV = [
@@ -165,6 +176,24 @@ export default function Sidebar({ soloLectura = false }: { soloLectura?: boolean
             >
               <RocketIcon size={34} trailId={r.trailId} className={`${r.color} drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]`} />
             </div>
+          ))}
+
+          {/* rayos que relampaguean sobre el mundo, como una tormenta real */}
+          {RAYOS.map((rayo, i) => (
+            <Zap
+              key={i}
+              size={rayo.size}
+              className="absolute z-30 text-yellow-300 fill-yellow-300 mh-lightning-flash pointer-events-none"
+              style={{
+                top: rayo.top,
+                left: rayo.left,
+                transform: `rotate(${rayo.rotate}deg)`,
+                animationDuration: `${rayo.duration}s`,
+                animationDelay: `${rayo.delay}s`,
+                filter:
+                  "drop-shadow(0 0 4px rgba(254,240,138,0.95)) drop-shadow(0 0 12px rgba(250,204,21,0.75)) drop-shadow(0 0 22px rgba(234,179,8,0.5))",
+              }}
+            />
           ))}
         </div>
       </div>
