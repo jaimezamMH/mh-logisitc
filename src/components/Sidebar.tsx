@@ -17,6 +17,29 @@ import {
 } from "lucide-react";
 import Globe from "@/components/Globe";
 
+// Estrella fugaz grande y gruesa, blanco-azulada, que cruza por encima del
+// mundo — cabeza brillante con un halo en capas (efecto 3D) y una cola
+// gruesa ahusada detrás, apuntando en diagonal (abajo-derecha).
+function EstrellaFugaz({ className }: { className?: string }) {
+  return (
+    <svg width="110" height="30" viewBox="0 0 110 30" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id="mhEstrellaFugazCola" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#7dd3fc" stopOpacity="0" />
+          <stop offset="55%" stopColor="#7dd3fc" stopOpacity="0.5" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0.95" />
+        </linearGradient>
+      </defs>
+      {/* cola gruesa, ahusada */}
+      <path d="M0,15 L84,7 L84,23 Z" fill="url(#mhEstrellaFugazCola)" />
+      {/* cabeza brillante, en capas para efecto 3D */}
+      <circle cx="94" cy="15" r="9" fill="#bae6fd" opacity="0.55" />
+      <circle cx="94" cy="15" r="6" fill="#ffffff" />
+      <circle cx="92" cy="13" r="2.4" fill="#e0f2fe" />
+    </svg>
+  );
+}
+
 // Cohete con una estela/rayo grande, para que "viaje" por una ruta curva
 // sobre el mundo del menú — dibujado a mano en SVG. Apunta hacia la derecha
 // (estela a la izquierda). Como viaja sobre un offset-path con
@@ -166,6 +189,11 @@ export default function Sidebar({ soloLectura = false }: { soloLectura?: boolean
               <RocketIcon size={34} trailId={r.trailId} className={`${r.color} drop-shadow-[0_2px_5px_rgba(0,0,0,0.5)]`} />
             </div>
           ))}
+
+          {/* estrella fugaz grande, cruza por encima del mundo cada 3s */}
+          <div className="absolute -top-2 -left-6 z-40 pointer-events-none mh-shooting-star">
+            <EstrellaFugaz className="drop-shadow-[0_0_6px_#ffffff] drop-shadow-[0_0_16px_#7dd3fc] drop-shadow-[0_0_30px_#38bdf8]" />
+          </div>
         </div>
       </div>
 
