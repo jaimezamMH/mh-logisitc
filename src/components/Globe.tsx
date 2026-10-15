@@ -5,10 +5,11 @@
 function Continentes({ x = 0 }: { x?: number }) {
   return (
     <g transform={`translate(${x},0)`} fill="#f6b73c" stroke="#c9881f" strokeWidth="1.2" strokeLinejoin="round">
-      {/* América */}
-      <ellipse cx="30" cy="54" rx="19" ry="29" />
-      <ellipse cx="44" cy="96" rx="12" ry="22" />
-      <ellipse cx="39" cy="132" rx="8" ry="17" />
+      {/* Norteamérica (EUA, México, Canadá) — silueta reconocible, no un óvalo
+          genérico: Canadá ancho arriba, Florida como puntita a la derecha,
+          México angostándose hasta Centroamérica abajo */}
+      <path d="M10,16 L26,8 L42,12 L50,24 L44,36 L54,44 L60,58 L54,68 L46,62 L42,74 L46,84 L36,94 L30,106 L20,92 L14,74 L8,56 L4,36 L6,20 Z" />
+      <ellipse cx="33" cy="128" rx="7" ry="16" />
       {/* África + Europa */}
       <ellipse cx="135" cy="43" rx="21" ry="16" />
       <ellipse cx="149" cy="86" rx="17" ry="29" />
