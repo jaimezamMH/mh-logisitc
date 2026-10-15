@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Truck, Landmark, Wrench, Ship, Signpost, IdCard, X } from "lucide-react";
+import { Truck, Landmark, Wrench, Ship, Signpost, IdCard, X, MonitorPlay } from "lucide-react";
 import TopBar from "@/components/TopBar";
 import { Card, CardHeader, EmptyState, StatusBadge, SerieTag, ClockBadge } from "@/components/ui";
 import PrintButton from "@/components/PrintButton";
@@ -335,7 +335,16 @@ export default async function ReportesPage({
               </Link>
             ))}
           </div>
-          <PrintButton />
+          <div className="no-print flex items-center gap-2">
+            <Link
+              href="/reportes/pantalla"
+              className="flex items-center gap-2 rounded-lg border border-border hover:bg-surface-muted text-ink-secondary text-sm font-medium px-4 py-2"
+            >
+              <MonitorPlay size={16} />
+              Modo pantalla
+            </Link>
+            <PrintButton />
+          </div>
         </div>
 
         {vista === "semanal" && (

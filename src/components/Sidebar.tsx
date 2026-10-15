@@ -81,7 +81,7 @@ const NAV = [
 
 export default function Sidebar({ soloLectura = false }: { soloLectura?: boolean }) {
   const pathname = usePathname();
-  if (pathname === "/login" || pathname.startsWith("/publico")) return null;
+  if (pathname === "/login" || pathname.startsWith("/publico") || pathname === "/reportes/pantalla") return null;
 
   const items = soloLectura ? NAV.filter((item) => item.href !== "/importar") : NAV;
 

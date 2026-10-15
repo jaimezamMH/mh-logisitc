@@ -99,6 +99,27 @@ body {
   background: transparent;
 }
 
+/* Modo pantalla de Reportes (/reportes/pantalla): lista que se desplaza sola
+   hacia abajo sin parar. El contenido se dibuja dos veces seguidas y se
+   anima de translateY(0) a translateY(-50%) — como la segunda copia es
+   idéntica, al llegar al final nunca se ve un salto, es un bucle continuo. */
+@keyframes mh-scroll-list {
+  from { transform: translateY(0); }
+  to { transform: translateY(-50%); }
+}
+
+.mh-scroll-list {
+  animation-name: mh-scroll-list;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mh-scroll-list {
+    animation: none;
+  }
+}
+
 /* Mundo (estilo planeta Tierra) con rutas de vuelo, en el espacio vacío del menú lateral */
 @keyframes mh-earth-spin {
   from { transform: translateX(0); }
