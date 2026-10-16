@@ -20,17 +20,19 @@ function CostosPorConcepto({
   costos,
   fuente = "ordenes",
 }: {
-  costos: { fleteUSA: number; importacion: number; maniobras: number; fleteMx: number; permiso: number; repuveTitulo: number };
+  costos: { fleteUSA: number; importacion: number; maniobras: number; fleteMx: number; permiso: number; seguro: number; placas: number; repuveTitulo: number };
   fuente?: "ordenes" | "entregas";
 }) {
   const total =
-    costos.fleteUSA + costos.importacion + costos.maniobras + costos.fleteMx + costos.permiso + costos.repuveTitulo;
+    costos.fleteUSA + costos.importacion + costos.maniobras + costos.fleteMx + costos.permiso + costos.seguro + costos.placas + costos.repuveTitulo;
   const conceptos = [
     { label: "Flete USA", value: costos.fleteUSA, icon: Truck },
     { label: "Importación / Aduana", value: costos.importacion, icon: Landmark },
     { label: "Maniobra/Reparación", value: costos.maniobras, icon: Wrench },
     { label: "Flete México", value: costos.fleteMx, icon: Ship },
-    { label: "Permiso/Seguro/Placas", value: costos.permiso, icon: Signpost },
+    { label: "Permiso", value: costos.permiso, icon: Signpost },
+    { label: "Seguro", value: costos.seguro, icon: Signpost },
+    { label: "Placas", value: costos.placas, icon: Signpost },
     { label: "Repuve/Título", value: costos.repuveTitulo, icon: IdCard },
   ];
   return (
@@ -43,7 +45,7 @@ function CostosPorConcepto({
             : "De las unidades entregadas en este periodo (no hay órdenes de pago capturadas en la app para este periodo)"
         }
       />
-      <div className="p-5 grid grid-cols-2 sm:grid-cols-5 gap-4">
+      <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
         {conceptos.map((c) => (
           <div key={c.label} className="rounded-lg border border-border p-3">
             <c.icon size={16} className="text-brand-blue-600 mb-1.5" />
@@ -123,20 +125,22 @@ function PagosPorProveedor({
 function CostoPromedio({
   costos,
 }: {
-  costos: { fleteUSA: number; importacion: number; maniobras: number; fleteMx: number; permiso: number; repuveTitulo: number };
+  costos: { fleteUSA: number; importacion: number; maniobras: number; fleteMx: number; permiso: number; seguro: number; placas: number; repuveTitulo: number };
 }) {
   const conceptos = [
     { label: "Flete USA", value: costos.fleteUSA, icon: Truck },
     { label: "Importación / Aduana", value: costos.importacion, icon: Landmark },
     { label: "Maniobra/Reparación", value: costos.maniobras, icon: Wrench },
     { label: "Flete México", value: costos.fleteMx, icon: Ship },
-    { label: "Permiso/Seguro/Placas", value: costos.permiso, icon: Signpost },
+    { label: "Permiso", value: costos.permiso, icon: Signpost },
+    { label: "Seguro", value: costos.seguro, icon: Signpost },
+    { label: "Placas", value: costos.placas, icon: Signpost },
     { label: "Repuve/Título", value: costos.repuveTitulo, icon: IdCard },
   ];
   return (
     <Card>
       <CardHeader title="Costo promedio por unidad" subtitle="Promedio de las unidades entregadas este mes, por concepto" />
-      <div className="p-5 grid grid-cols-2 sm:grid-cols-5 gap-4">
+      <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
         {conceptos.map((c) => (
           <div key={c.label} className="rounded-lg border border-border p-3">
             <c.icon size={16} className="text-brand-blue-600 mb-1.5" />

@@ -69,7 +69,7 @@ export default async function CostosPage({
 
   const activos = shipmentsTodos.filter((s) => s.estatus !== "Entregado");
   const sinCostos = activos.filter(
-    (s) => s.costoFleteUSA + s.costoImportacion + s.costoManiobras + s.costoFleteMx + s.costoPermiso === 0
+    (s) => s.costoFleteUSA + s.costoImportacion + s.costoManiobras + s.costoFleteMx + s.costoPermiso + s.costoSeguro + s.costoPlacas === 0
   ).length;
   const sinOrden = activos.filter((s) => s._count.paymentOrders === 0).length;
 

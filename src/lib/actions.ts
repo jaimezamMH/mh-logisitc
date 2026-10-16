@@ -128,10 +128,14 @@ export async function crearVentaServicio(formData: FormData) {
       costoImportacion: num(formData, "costoImportacion"),
       costoFleteMx: num(formData, "costoFleteMx"),
       costoPermiso: num(formData, "costoPermiso"),
+      costoSeguro: num(formData, "costoSeguro"),
+      costoPlacas: num(formData, "costoPlacas"),
       precioFleteUSA: num(formData, "precioFleteUSA"),
       precioImportacion: num(formData, "precioImportacion"),
       precioFleteMx: num(formData, "precioFleteMx"),
       precioPermiso: num(formData, "precioPermiso"),
+      precioSeguro: num(formData, "precioSeguro"),
+      precioPlacas: num(formData, "precioPlacas"),
     },
   });
 
@@ -293,6 +297,10 @@ export async function updateShipmentCosts(shipmentId: string, formData: FormData
       costoManiobras: num(formData, "costoManiobras"),
       costoFleteMx: num(formData, "costoFleteMx"),
       costoPermiso: num(formData, "costoPermiso"),
+      // Seguro/Placas se separaron después; si una pantalla todavía no los
+      // manda (ej. la tabla editable de /costos), no se pisan con 0.
+      ...(formData.has("costoSeguro") ? { costoSeguro: num(formData, "costoSeguro") } : {}),
+      ...(formData.has("costoPlacas") ? { costoPlacas: num(formData, "costoPlacas") } : {}),
       costoRepuveTitulo: num(formData, "costoRepuveTitulo"),
       fleteMexAplica: formData.get("fleteMexAplica") === "on",
       ...(tienePrecios
@@ -301,6 +309,8 @@ export async function updateShipmentCosts(shipmentId: string, formData: FormData
             precioImportacion: num(formData, "precioImportacion"),
             precioFleteMx: num(formData, "precioFleteMx"),
             precioPermiso: num(formData, "precioPermiso"),
+            precioSeguro: num(formData, "precioSeguro"),
+            precioPlacas: num(formData, "precioPlacas"),
           }
         : {}),
     },
@@ -364,13 +374,15 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
     montoFleteUSA = typeof valor === "string" && valor.trim() !== "" ? num(formData, "costoFleteUSA") : s.costoFleteUSA;
   }
 
-  // Los otros 4 conceptos siguen igual que siempre: un solo monto editable
+  // Los demás conceptos siguen igual que siempre: un solo monto editable
   // aquí mismo, que se guarda en el equipo aunque el concepto esté desmarcado.
   const OTROS_CONCEPTOS = [
     { campo: "costoImportacion", check: "incluirImportacion", label: "Importación / Aduana" },
     { campo: "costoManiobras", check: "incluirManiobras", label: "Maniobra/Reparación" },
     { campo: "costoFleteMx", check: "incluirFleteMx", label: "Flete México" },
-    { campo: "costoPermiso", check: "incluirPermiso", label: "Permiso/Seguro/Placas" },
+    { campo: "costoPermiso", check: "incluirPermiso", label: "Permiso" },
+    { campo: "costoSeguro", check: "incluirSeguro", label: "Seguro" },
+    { campo: "costoPlacas", check: "incluirPlacas", label: "Placas" },
     { campo: "costoRepuveTitulo", check: "incluirRepuveTitulo", label: "Repuve/Título" },
   ] as const;
 
@@ -393,6 +405,8 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
     costoManiobras: 0,
     costoFleteMx: 0,
     costoPermiso: 0,
+    costoSeguro: 0,
+    costoPlacas: 0,
     costoRepuveTitulo: 0,
   };
   const etiquetas: string[] = [];
@@ -407,7 +421,7 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
   const concepto =
     etiquetas.length === 0
       ? "Sin conceptos"
-      : etiquetas.length === 6
+      : etiquetas.length === OTROS_CONCEPTOS.length + 1
         ? "Todos los conceptos"
         : etiquetas.join(" + ");
 
@@ -431,6 +445,8 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
       costoManiobras: montos.costoManiobras,
       costoFleteMx: montos.costoFleteMx,
       costoPermiso: montos.costoPermiso,
+      costoSeguro: montos.costoSeguro,
+      costoPlacas: montos.costoPlacas,
       costoRepuveTitulo: montos.costoRepuveTitulo,
       concepto,
       total,

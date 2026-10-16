@@ -16,7 +16,9 @@ const CONCEPTOS_SERVICIO = [
   { costo: "costoFleteUSA", precio: "precioFleteUSA", label: "Flete USA" },
   { costo: "costoImportacion", precio: "precioImportacion", label: "Importación / Aduana" },
   { costo: "costoFleteMx", precio: "precioFleteMx", label: "Flete México" },
-  { costo: "costoPermiso", precio: "precioPermiso", label: "Permiso/Seguro/Placas" },
+  { costo: "costoPermiso", precio: "precioPermiso", label: "Permiso" },
+  { costo: "costoSeguro", precio: "precioSeguro", label: "Seguro" },
+  { costo: "costoPlacas", precio: "precioPlacas", label: "Placas" },
 ] as const;
 
 export default async function VentasPage({

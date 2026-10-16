@@ -29,7 +29,9 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
         { label: "Importación / Aduana", valor: order.costoImportacion },
         { label: "Maniobra/Reparación", valor: order.costoManiobras },
         { label: "Flete México", valor: order.costoFleteMx },
-        { label: "Permiso/Seguro/Placas", valor: order.costoPermiso },
+        { label: "Permiso", valor: order.costoPermiso },
+        { label: "Seguro", valor: order.costoSeguro },
+        { label: "Placas", valor: order.costoPlacas },
         { label: "Repuve/Título", valor: order.costoRepuveTitulo },
       ].filter((l) => l.valor > 0)
     : order.gastosGenerales.map((g) => ({ label: g.descripcion, valor: g.monto }));

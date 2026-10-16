@@ -75,6 +75,8 @@ type ConCostos = {
   costoManiobras: number;
   costoFleteMx: number;
   costoPermiso: number;
+  costoSeguro: number;
+  costoPlacas: number;
   costoRepuveTitulo: number;
 };
 
@@ -86,10 +88,12 @@ function costosPorConceptoDe(unidades: ConCostos[]) {
       acc.maniobras += s.costoManiobras;
       acc.fleteMx += s.costoFleteMx;
       acc.permiso += s.costoPermiso;
+      acc.seguro += s.costoSeguro;
+      acc.placas += s.costoPlacas;
       acc.repuveTitulo += s.costoRepuveTitulo;
       return acc;
     },
-    { fleteUSA: 0, importacion: 0, maniobras: 0, fleteMx: 0, permiso: 0, repuveTitulo: 0 }
+    { fleteUSA: 0, importacion: 0, maniobras: 0, fleteMx: 0, permiso: 0, seguro: 0, placas: 0, repuveTitulo: 0 }
   );
 }
 
@@ -205,6 +209,8 @@ export async function getDashboardData() {
       s.costoManiobras +
       s.costoFleteMx +
       s.costoPermiso +
+      s.costoSeguro +
+      s.costoPlacas +
       s.costoRepuveTitulo,
     0
   );
@@ -524,6 +530,8 @@ export async function getCostosPromedio2026() {
   ];
   const maniobras = shipments.map((s) => s.costoManiobras).filter((v) => v > 0);
   const permiso = shipments.map((s) => s.costoPermiso).filter((v) => v > 0);
+  const seguro = shipments.map((s) => s.costoSeguro).filter((v) => v > 0);
+  const placas = shipments.map((s) => s.costoPlacas).filter((v) => v > 0);
   const repuveTitulo = shipments.map((s) => s.costoRepuveTitulo).filter((v) => v > 0);
 
   const avg = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
@@ -534,6 +542,8 @@ export async function getCostosPromedio2026() {
     fleteMx: { promedio: avg(fleteMx), n: fleteMx.length },
     maniobras: { promedio: avg(maniobras), n: maniobras.length },
     permiso: { promedio: avg(permiso), n: permiso.length },
+    seguro: { promedio: avg(seguro), n: seguro.length },
+    placas: { promedio: avg(placas), n: placas.length },
     repuveTitulo: { promedio: avg(repuveTitulo), n: repuveTitulo.length },
   };
 }
@@ -570,7 +580,9 @@ export async function getVentasServicioLogistico() {
       { label: "Flete USA", costo: s.costoFleteUSA, precio: s.precioFleteUSA },
       { label: "Importación / Aduana", costo: s.costoImportacion, precio: s.precioImportacion },
       { label: "Flete México", costo: s.costoFleteMx, precio: s.precioFleteMx },
-      { label: "Permiso/Seguro/Placas", costo: s.costoPermiso, precio: s.precioPermiso },
+      { label: "Permiso", costo: s.costoPermiso, precio: s.precioPermiso },
+      { label: "Seguro", costo: s.costoSeguro, precio: s.precioSeguro },
+      { label: "Placas", costo: s.costoPlacas, precio: s.precioPlacas },
     ].map((c) => ({ ...c, utilidad: c.precio - c.costo }));
 
     const totalCosto = conceptos.reduce((a, c) => a + c.costo, 0);
@@ -637,6 +649,8 @@ export async function getReporteDiario(fecha: Date = new Date()) {
       e.shipment.costoManiobras +
       e.shipment.costoFleteMx +
       e.shipment.costoPermiso +
+      e.shipment.costoSeguro +
+      e.shipment.costoPlacas +
       e.shipment.costoRepuveTitulo,
     0
   );
@@ -681,7 +695,7 @@ export async function getReporteRango(from: Date, to: Date) {
   const totalPagado = ordenes.reduce((a, o) => a + o.total, 0);
   const costoTotalUSD = entregas.reduce(
     (a, s) =>
-      a + s.costoFleteUSA + s.costoImportacion + s.costoManiobras + s.costoFleteMx + s.costoPermiso + s.costoRepuveTitulo,
+      a + s.costoFleteUSA + s.costoImportacion + s.costoManiobras + s.costoFleteMx + s.costoPermiso + s.costoSeguro + s.costoPlacas + s.costoRepuveTitulo,
     0
   );
 
@@ -712,6 +726,8 @@ export async function getReporteRango(from: Date, to: Date) {
     maniobras: costosPorConceptoEntregas.maniobras / n,
     fleteMx: costosPorConceptoEntregas.fleteMx / n,
     permiso: costosPorConceptoEntregas.permiso / n,
+    seguro: costosPorConceptoEntregas.seguro / n,
+    placas: costosPorConceptoEntregas.placas / n,
     repuveTitulo: costosPorConceptoEntregas.repuveTitulo / n,
   };
 

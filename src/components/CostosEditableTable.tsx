@@ -22,6 +22,8 @@ export interface FilaCosto {
   costoManiobras: number;
   costoFleteMx: number;
   costoPermiso: number;
+  costoSeguro: number;
+  costoPlacas: number;
   costoRepuveTitulo: number;
   tieneGastosFleteUSA?: boolean;
 }
@@ -31,7 +33,9 @@ const CAMPOS: { key: keyof FilaCosto; label: string }[] = [
   { key: "costoImportacion", label: "Importación" },
   { key: "costoManiobras", label: "Maniobra/Reparación" },
   { key: "costoFleteMx", label: "Flete Mx" },
-  { key: "costoPermiso", label: "Permiso/Seguro/Placas" },
+  { key: "costoPermiso", label: "Permiso" },
+  { key: "costoSeguro", label: "Seguro" },
+  { key: "costoPlacas", label: "Placas" },
   { key: "costoRepuveTitulo", label: "Repuve/Título" },
 ];
 
@@ -55,6 +59,8 @@ export default function CostosEditableTable({
       costoManiobras: String(s.costoManiobras),
       costoFleteMx: String(s.costoFleteMx),
       costoPermiso: String(s.costoPermiso),
+      costoSeguro: String(s.costoSeguro),
+      costoPlacas: String(s.costoPlacas),
       costoRepuveTitulo: String(s.costoRepuveTitulo),
     });
   }
@@ -101,7 +107,7 @@ export default function CostosEditableTable({
           {shipments.map((s) => {
             const editando = editId === s.id;
             const total =
-              s.costoFleteUSA + s.costoImportacion + s.costoManiobras + s.costoFleteMx + s.costoPermiso + s.costoRepuveTitulo;
+              s.costoFleteUSA + s.costoImportacion + s.costoManiobras + s.costoFleteMx + s.costoPermiso + s.costoSeguro + s.costoPlacas + s.costoRepuveTitulo;
             return (
               <tr key={s.id} className={`border-b border-border last:border-0 ${editando ? "bg-brand-blue-50" : "hover:bg-surface-muted"}`}>
                 <td className="px-5 py-2.5">

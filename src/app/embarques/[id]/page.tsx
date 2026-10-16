@@ -47,11 +47,14 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
     shipment.costoManiobras +
     shipment.costoFleteMx +
     shipment.costoPermiso +
+    shipment.costoSeguro +
+    shipment.costoPlacas +
     shipment.costoRepuveTitulo;
 
   const esServicio = shipment.tipoVenta === "Servicio Logístico";
   const totalPrecioServicio =
-    shipment.precioFleteUSA + shipment.precioImportacion + shipment.precioFleteMx + shipment.precioPermiso;
+    shipment.precioFleteUSA + shipment.precioImportacion + shipment.precioFleteMx + shipment.precioPermiso +
+    shipment.precioSeguro + shipment.precioPlacas;
   const utilidadServicio = totalPrecioServicio - totalCostos;
 
   const info = estatusInfo(shipment.estatus);
@@ -292,7 +295,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
               <Card>
                 <CardHeader
                   title="Costos del embarque"
-                  subtitle={esServicio ? "Costo real vs. precio al cliente" : "Flete USA, importación, maniobras, flete Mx y permiso"}
+                  subtitle={esServicio ? "Costo real vs. precio al cliente" : "Flete USA, importación, maniobras, flete Mx, permiso, seguro y placas"}
                 />
                 <div className="p-5 space-y-2">
                   {[
@@ -300,7 +303,9 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                     { label: "Importación", costo: shipment.costoImportacion, precio: shipment.precioImportacion },
                     ...(esServicio ? [] : [{ label: "Maniobra/Reparación", costo: shipment.costoManiobras, precio: 0 }]),
                     { label: "Flete México", costo: shipment.costoFleteMx, precio: shipment.precioFleteMx },
-                    { label: "Permiso/Seguro/Placas", costo: shipment.costoPermiso, precio: shipment.precioPermiso },
+                    { label: "Permiso", costo: shipment.costoPermiso, precio: shipment.precioPermiso },
+                    { label: "Seguro", costo: shipment.costoSeguro, precio: shipment.precioSeguro },
+                    { label: "Placas", costo: shipment.costoPlacas, precio: shipment.precioPlacas },
                     { label: "Repuve/Título", costo: shipment.costoRepuveTitulo, precio: 0 },
                   ].map((c) => (
                     <div key={c.label} className="flex items-center justify-between text-sm">
@@ -364,6 +369,8 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
               costoManiobras: String(shipment.costoManiobras),
               costoFleteMx: String(shipment.costoFleteMx),
               costoPermiso: String(shipment.costoPermiso),
+              costoSeguro: String(shipment.costoSeguro),
+              costoPlacas: String(shipment.costoPlacas),
               costoRepuveTitulo: String(shipment.costoRepuveTitulo),
             }}
           >
@@ -374,7 +381,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                 subtitle={
                   esServicio
                     ? "Costo real (lo que pagas) vs. precio al cliente (lo que cobras) — la diferencia es tu utilidad"
-                    : "Alimenta aquí flete USA, importación, maniobras, flete Mx, permiso y repuve/título"
+                    : "Alimenta aquí flete USA, importación, maniobras, flete Mx, permiso, seguro, placas y repuve/título"
                 }
               />
               <form action={updateShipmentCosts.bind(null, shipment.id)} className="p-5 space-y-4">
@@ -390,7 +397,9 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                       { campo: "costoFleteUSA", precioCampo: "precioFleteUSA", label: "Flete USA", costo: shipment.costoFleteUSA, precio: shipment.precioFleteUSA },
                       { campo: "costoImportacion", precioCampo: "precioImportacion", label: "Importación", costo: shipment.costoImportacion, precio: shipment.precioImportacion },
                       { campo: "costoFleteMx", precioCampo: "precioFleteMx", label: "Flete México", costo: shipment.costoFleteMx, precio: shipment.precioFleteMx },
-                      { campo: "costoPermiso", precioCampo: "precioPermiso", label: "Permiso/Seguro/Placas", costo: shipment.costoPermiso, precio: shipment.precioPermiso },
+                      { campo: "costoPermiso", precioCampo: "precioPermiso", label: "Permiso", costo: shipment.costoPermiso, precio: shipment.precioPermiso },
+                      { campo: "costoSeguro", precioCampo: "precioSeguro", label: "Seguro", costo: shipment.costoSeguro, precio: shipment.precioSeguro },
+                      { campo: "costoPlacas", precioCampo: "precioPlacas", label: "Placas", costo: shipment.costoPlacas, precio: shipment.precioPlacas },
                     ].map((c) => (
                       <div key={c.campo} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center">
                         <span className="text-sm text-ink-secondary">{c.label}</span>
@@ -414,8 +423,20 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
+                    <div className="col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
                       <ViaticosFleteUSA />
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-ink-secondary">Permiso</span>
+                        <SyncedMoneyInput campo="costoPermiso" />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-ink-secondary">Seguro</span>
+                        <SyncedMoneyInput campo="costoSeguro" />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-ink-secondary">Placas</span>
+                        <SyncedMoneyInput campo="costoPlacas" />
+                      </label>
                     </div>
                     <label className="flex flex-col gap-1 text-sm">
                       <span className="text-ink-secondary">Flete USA</span>
@@ -432,10 +453,6 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                     <label className="flex flex-col gap-1 text-sm">
                       <span className="text-ink-secondary">Flete México</span>
                       <SyncedMoneyInput campo="costoFleteMx" />
-                    </label>
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-ink-secondary">Permiso/Seguro/Placas</span>
-                      <SyncedMoneyInput campo="costoPermiso" />
                     </label>
                     <label className="flex flex-col gap-1 text-sm">
                       <span className="text-ink-secondary">Repuve/Título</span>
@@ -472,7 +489,9 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                       { check: "incluirImportacion", campo: "costoImportacion", label: "Importación / Aduana" },
                       { check: "incluirManiobras", campo: "costoManiobras", label: "Maniobra/Reparación" },
                       { check: "incluirFleteMx", campo: "costoFleteMx", label: "Flete México" },
-                      { check: "incluirPermiso", campo: "costoPermiso", label: "Permiso/Seguro/Placas" },
+                      { check: "incluirPermiso", campo: "costoPermiso", label: "Permiso" },
+                      { check: "incluirSeguro", campo: "costoSeguro", label: "Seguro" },
+                      { check: "incluirPlacas", campo: "costoPlacas", label: "Placas" },
                       { check: "incluirRepuveTitulo", campo: "costoRepuveTitulo", label: "Repuve/Título" },
                     ].map((c) => (
                       <label key={c.check} className="flex items-center justify-between gap-2 text-sm rounded-lg border border-border px-3 py-2">

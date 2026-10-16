@@ -54,6 +54,8 @@ model Shipment {
   costoManiobras    Float    @default(0)
   costoFleteMx      Float    @default(0)
   costoPermiso      Float    @default(0)
+  costoSeguro       Float    @default(0)
+  costoPlacas       Float    @default(0)
   costoRepuveTitulo Float    @default(0) // Repuve / Título — trámite de registro vehicular
   fleteMexAplica    Boolean  @default(true)
 
@@ -64,6 +66,8 @@ model Shipment {
   precioImportacion  Float   @default(0)
   precioFleteMx      Float   @default(0)
   precioPermiso      Float   @default(0)
+  precioSeguro       Float   @default(0)
+  precioPlacas       Float   @default(0)
 
   // Fechas clave del ciclo
   fechaInicio            DateTime? // cuándo se dio de alta / inició el proceso (arranca el "reloj")
@@ -141,6 +145,8 @@ model PaymentOrder {
   costoManiobras    Float
   costoFleteMx      Float
   costoPermiso      Float
+  costoSeguro       Float    @default(0)
+  costoPlacas       Float    @default(0)
   costoRepuveTitulo Float    @default(0)
   total             Float
   tipoCambio        Float? // pesos por dólar del día, para ver el total también en MXN

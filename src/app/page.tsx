@@ -292,13 +292,15 @@ export default async function DashboardPage() {
             title="Costos por concepto"
             subtitle="Solo de las operaciones que todavía no se han entregado"
           />
-          <div className="p-5 grid grid-cols-2 sm:grid-cols-5 gap-4">
+          <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
               { label: "Flete USA", value: data.costosPorConcepto.fleteUSA, icon: Truck },
               { label: "Importación", value: data.costosPorConcepto.importacion, icon: Landmark },
               { label: "Maniobra/Reparación", value: data.costosPorConcepto.maniobras, icon: Wrench },
               { label: "Flete México", value: data.costosPorConcepto.fleteMx, icon: Ship },
-              { label: "Permiso/Seguro/Placas", value: data.costosPorConcepto.permiso, icon: Signpost },
+              { label: "Permiso", value: data.costosPorConcepto.permiso, icon: Signpost },
+              { label: "Seguro", value: data.costosPorConcepto.seguro, icon: Signpost },
+              { label: "Placas", value: data.costosPorConcepto.placas, icon: Signpost },
               { label: "Repuve/Título", value: data.costosPorConcepto.repuveTitulo, icon: IdCard },
             ].map((c) => (
               <div key={c.label} className="rounded-lg border border-border p-3">
