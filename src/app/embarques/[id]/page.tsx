@@ -5,7 +5,7 @@ import { Card, CardHeader, StatusBadge, EmptyState, SerieTag, ClockBadge, MoneyI
 import UserSelect from "@/components/UserSelect";
 import SelectOrNew from "@/components/SelectOrNew";
 import BancoSelect from "@/components/BancoSelect";
-import { CostosSyncProvider, SyncedMoneyInput, SyncedTotal, ViaticosFleteUSA, type CostoCampo } from "@/components/CostosSync";
+import { CostosSyncProvider, SyncedMoneyInput, SyncedHiddenInput, SyncedTotal, ViaticosFleteUSA, type CostoCampo } from "@/components/CostosSync";
 import ConfirmZeroCostButton from "@/components/ConfirmZeroCostButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import FotoEquipo from "@/components/FotoEquipo";
@@ -44,6 +44,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
   const totalCostos =
     shipment.costoFleteUSA +
     shipment.costoImportacion +
+    shipment.costoBondCanada +
     shipment.costoManiobras +
     shipment.costoFleteMx +
     shipment.costoPermiso +
@@ -301,6 +302,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                   {[
                     { label: "Flete USA", costo: shipment.costoFleteUSA, precio: shipment.precioFleteUSA },
                     { label: "Importación", costo: shipment.costoImportacion, precio: shipment.precioImportacion },
+                    ...(shipment.costoBondCanada > 0 ? [{ label: "Bond/Canadá", costo: shipment.costoBondCanada, precio: 0 }] : []),
                     ...(esServicio ? [] : [{ label: "Maniobra/Reparación", costo: shipment.costoManiobras, precio: 0 }]),
                     { label: "Flete México", costo: shipment.costoFleteMx, precio: shipment.precioFleteMx },
                     { label: "Permiso", costo: shipment.costoPermiso, precio: shipment.precioPermiso },
@@ -366,6 +368,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
             inicial={{
               costoFleteUSA: String(shipment.costoFleteUSA),
               costoImportacion: String(shipment.costoImportacion),
+              costoBondCanada: String(shipment.costoBondCanada),
               costoManiobras: String(shipment.costoManiobras),
               costoFleteMx: String(shipment.costoFleteMx),
               costoPermiso: String(shipment.costoPermiso),
@@ -442,10 +445,16 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                       <span className="text-ink-secondary">Flete USA</span>
                       <SyncedMoneyInput campo="costoFleteUSA" />
                     </label>
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-ink-secondary">Importación</span>
-                      <SyncedMoneyInput campo="costoImportacion" />
-                    </label>
+                    <div className="flex flex-col gap-2">
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-ink-secondary">Importación</span>
+                        <SyncedMoneyInput campo="costoImportacion" />
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs">
+                        <span className="text-ink-muted">Bond/Canadá (solo si cruza de Canadá a USA, si no deja $0)</span>
+                        <SyncedMoneyInput campo="costoBondCanada" className="rounded-md border border-border px-2 py-1.5 text-xs" />
+                      </label>
+                    </div>
                     <label className="flex flex-col gap-1 text-sm">
                       <span className="text-ink-secondary">Maniobra/Reparación</span>
                       <SyncedMoneyInput campo="costoManiobras" />
@@ -483,6 +492,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
               />
               <div className="p-5 space-y-4">
                 <form action={generarOrdenDePago.bind(null, shipment.id)} className="space-y-3">
+                  <SyncedHiddenInput campo="costoBondCanada" />
                   <div className="space-y-1.5">
                     {[
                       { check: "incluirFleteUSA", campo: "costoFleteUSA", label: "Flete USA" },
@@ -498,6 +508,9 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                         <span className="flex items-center gap-2 text-ink-secondary shrink-0">
                           <input type="checkbox" name={c.check} defaultChecked />
                           {c.label}
+                          {c.campo === "costoImportacion" && shipment.costoBondCanada > 0 && (
+                            <span className="text-xs text-ink-muted">(incluye Bond/Canadá)</span>
+                          )}
                         </span>
                         <SyncedMoneyInput
                           campo={c.campo as CostoCampo}

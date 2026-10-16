@@ -19,6 +19,7 @@ export interface FilaCosto {
   fleteMexAplica: boolean;
   costoFleteUSA: number;
   costoImportacion: number;
+  costoBondCanada: number;
   costoManiobras: number;
   costoFleteMx: number;
   costoPermiso: number;
@@ -107,7 +108,7 @@ export default function CostosEditableTable({
           {shipments.map((s) => {
             const editando = editId === s.id;
             const total =
-              s.costoFleteUSA + s.costoImportacion + s.costoManiobras + s.costoFleteMx + s.costoPermiso + s.costoSeguro + s.costoPlacas + s.costoRepuveTitulo;
+              s.costoFleteUSA + s.costoImportacion + s.costoBondCanada + s.costoManiobras + s.costoFleteMx + s.costoPermiso + s.costoSeguro + s.costoPlacas + s.costoRepuveTitulo;
             return (
               <tr key={s.id} className={`border-b border-border last:border-0 ${editando ? "bg-brand-blue-50" : "hover:bg-surface-muted"}`}>
                 <td className="px-5 py-2.5">

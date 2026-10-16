@@ -51,6 +51,7 @@ model Shipment {
   // Costos (MXN o USD según capture el usuario, se define en la UI)
   costoFleteUSA     Float    @default(0)
   costoImportacion  Float    @default(0)
+  costoBondCanada   Float    @default(0) // trámite de bond para cruzar de Canadá a USA — se suma a Importación; 0 si no aplica (no es de Canadá)
   costoManiobras    Float    @default(0)
   costoFleteMx      Float    @default(0)
   costoPermiso      Float    @default(0)

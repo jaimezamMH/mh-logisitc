@@ -1,6 +1,6 @@
 "use client";
 
-const CAMPOS_COSTO = ["costoFleteUSA", "costoImportacion", "costoManiobras", "costoFleteMx", "costoPermiso", "costoSeguro", "costoPlacas", "costoRepuveTitulo"];
+const CAMPOS_COSTO = ["costoFleteUSA", "costoImportacion", "costoBondCanada", "costoManiobras", "costoFleteMx", "costoPermiso", "costoSeguro", "costoPlacas", "costoRepuveTitulo"];
 
 // Botón de "Generar orden de pago": si los conceptos de costo están en
 // $0 (nadie los capturó todavía), avisa antes de generarla — para que no

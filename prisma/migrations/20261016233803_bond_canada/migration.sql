@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Shipment" ADD COLUMN     "costoBondCanada" DOUBLE PRECISION NOT NULL DEFAULT 0;

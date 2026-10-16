@@ -72,6 +72,11 @@ function endOfLocalDay(d: Date) {
 type ConCostos = {
   costoFleteUSA: number;
   costoImportacion: number;
+  // Bond/Canadá: trámite para cruzar de Canadá a USA, solo aplica a esas
+  // unidades (en las demás queda en 0). No es un concepto aparte — se suma
+  // directo a Importación. Opcional porque las PaymentOrder no tienen este
+  // campo propio (ya viene pre-sumado en su costoImportacion al generarse).
+  costoBondCanada?: number;
   costoManiobras: number;
   costoFleteMx: number;
   costoPermiso: number;
@@ -84,7 +89,7 @@ function costosPorConceptoDe(unidades: ConCostos[]) {
   return unidades.reduce(
     (acc, s) => {
       acc.fleteUSA += s.costoFleteUSA;
-      acc.importacion += s.costoImportacion;
+      acc.importacion += s.costoImportacion + (s.costoBondCanada ?? 0);
       acc.maniobras += s.costoManiobras;
       acc.fleteMx += s.costoFleteMx;
       acc.permiso += s.costoPermiso;
@@ -206,6 +211,7 @@ export async function getDashboardData() {
       acc +
       s.costoFleteUSA +
       s.costoImportacion +
+      s.costoBondCanada +
       s.costoManiobras +
       s.costoFleteMx +
       s.costoPermiso +
@@ -521,7 +527,7 @@ export async function getCostosPromedio2026() {
     ...historico.map((h) => h.costoFleteUSA).filter((v) => v > 0),
   ];
   const importacion = [
-    ...shipments.map((s) => s.costoImportacion).filter((v) => v > 0),
+    ...shipments.map((s) => s.costoImportacion + s.costoBondCanada).filter((v) => v > 0),
     ...historico.map((h) => h.costoImportacion).filter((v) => v > 0),
   ];
   const fleteMx = [
@@ -646,6 +652,7 @@ export async function getReporteDiario(fecha: Date = new Date()) {
       a +
       e.shipment.costoFleteUSA +
       e.shipment.costoImportacion +
+      e.shipment.costoBondCanada +
       e.shipment.costoManiobras +
       e.shipment.costoFleteMx +
       e.shipment.costoPermiso +
@@ -695,7 +702,7 @@ export async function getReporteRango(from: Date, to: Date) {
   const totalPagado = ordenes.reduce((a, o) => a + o.total, 0);
   const costoTotalUSD = entregas.reduce(
     (a, s) =>
-      a + s.costoFleteUSA + s.costoImportacion + s.costoManiobras + s.costoFleteMx + s.costoPermiso + s.costoSeguro + s.costoPlacas + s.costoRepuveTitulo,
+      a + s.costoFleteUSA + s.costoImportacion + s.costoBondCanada + s.costoManiobras + s.costoFleteMx + s.costoPermiso + s.costoSeguro + s.costoPlacas + s.costoRepuveTitulo,
     0
   );
 

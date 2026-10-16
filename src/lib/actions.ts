@@ -301,6 +301,7 @@ export async function updateShipmentCosts(shipmentId: string, formData: FormData
       // manda (ej. la tabla editable de /costos), no se pisan con 0.
       ...(formData.has("costoSeguro") ? { costoSeguro: num(formData, "costoSeguro") } : {}),
       ...(formData.has("costoPlacas") ? { costoPlacas: num(formData, "costoPlacas") } : {}),
+      ...(formData.has("costoBondCanada") ? { costoBondCanada: num(formData, "costoBondCanada") } : {}),
       costoRepuveTitulo: num(formData, "costoRepuveTitulo"),
       fleteMexAplica: formData.get("fleteMexAplica") === "on",
       ...(tienePrecios
@@ -393,6 +394,13 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
       ? num(formData, c.campo)
       : (s[c.campo as keyof typeof s] as number);
   }
+  // Bond/Canadá no es un concepto aparte en la orden — se guarda en el
+  // equipo y se suma directo a Importación (ver abajo), igual que Flete USA.
+  const valorBondCanada = formData.get("costoBondCanada");
+  const montoBondCanada = typeof valorBondCanada === "string" && valorBondCanada.trim() !== ""
+    ? num(formData, "costoBondCanada")
+    : s.costoBondCanada;
+  costosActualizados.costoBondCanada = montoBondCanada;
   const shipmentActualizado = await prisma.shipment.update({
     where: { id: shipmentId },
     data: costosActualizados,
@@ -414,6 +422,8 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
   for (const c of OTROS_CONCEPTOS) {
     if (formData.get(c.check) === "on") {
       montos[c.campo] = shipmentActualizado[c.campo as keyof typeof shipmentActualizado] as number;
+      // Bond/Canadá viaja pegado a Importación (no tiene su propio check).
+      if (c.campo === "costoImportacion") montos[c.campo] += shipmentActualizado.costoBondCanada;
       etiquetas.push(c.label);
     }
   }

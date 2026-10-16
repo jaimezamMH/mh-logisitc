@@ -7,6 +7,7 @@ import { formatMXN } from "@/lib/constants";
 export type Costos = {
   costoFleteUSA: string;
   costoImportacion: string;
+  costoBondCanada: string;
   costoManiobras: string;
   costoFleteMx: string;
   costoPermiso: string;
@@ -88,4 +89,14 @@ export function SyncedMoneyInput({
       className={className}
     />
   );
+}
+
+// Para llevar el valor sincronizado a un <form> que no tiene el input visible
+// del campo (ej. "Orden de pago" necesita el valor vivo de Bond/Canadá para
+// poder sumarlo a Importación al generar la orden, aunque ese campo solo se
+// edite en "Costos del embarque").
+export function SyncedHiddenInput({ campo }: { campo: keyof Costos }) {
+  const ctx = useContext(CostosContext);
+  if (!ctx) throw new Error("SyncedHiddenInput debe usarse dentro de CostosSyncProvider");
+  return <input type="hidden" name={campo} value={ctx.valores[campo]} />;
 }
