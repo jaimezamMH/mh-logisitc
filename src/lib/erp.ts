@@ -49,6 +49,7 @@ export async function enviarOrdenAlERP(orderId: string): Promise<void> {
     },
     equipo: s
       ? {
+          erpId: s.erpId,
           folio: s.folio,
           descripcion: s.equipoDescripcion,
           categoria: s.categoria,
