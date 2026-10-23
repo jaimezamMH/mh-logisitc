@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatFecha, formatMXN, formatPesos } from "@/lib/constants";
 import PrintButton from "@/components/PrintButton";
-import { marcarOrdenPagada, cancelarOrdenDePago, eliminarOrdenDePago } from "@/lib/actions";
+import { marcarOrdenPagada, cancelarOrdenDePago, eliminarOrdenDePago, reintentarEnvioERP } from "@/lib/actions";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import { esSoloLectura } from "@/lib/auth-server";
 import { ArrowLeft } from "lucide-react";
@@ -44,6 +44,25 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
           {s ? "Volver a la unidad" : "Volver a costos"}
         </Link>
         <div className="flex items-center gap-3">
+          {order.erpEnviado ? (
+            <span className="text-xs text-brand-blue-700 bg-brand-blue-50 rounded-full px-3 py-1">
+              Sincronizada con ERP
+            </span>
+          ) : (
+            <span
+              className="text-xs text-red-600 bg-red-50 rounded-full px-3 py-1"
+              title={order.erpError ?? "Aún no se ha enviado al ERP"}
+            >
+              No sincronizada con ERP
+            </span>
+          )}
+          {!soloLectura && !order.erpEnviado && (
+            <form action={reintentarEnvioERP.bind(null, order.id)}>
+              <button className="rounded-lg border border-border text-sm px-4 py-2 hover:bg-surface-muted">
+                Reintentar envío a ERP
+              </button>
+            </form>
+          )}
           {!soloLectura && (
             <>
               {order.estatusPago === "Pendiente" && (

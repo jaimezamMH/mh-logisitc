@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { esSoloLectura } from "@/lib/auth-server";
+import { enviarOrdenAlERP } from "@/lib/erp";
 
 // Barrera real de seguridad para el acceso de "solo lectura" (Dirección): el
 // botón ya se oculta en la UI, pero esto bloquea igual si alguien manda la
@@ -481,6 +482,8 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
     });
   }
 
+  await enviarOrdenAlERP(order.id);
+
   revalidatePath(`/embarques/${shipmentId}`);
   revalidatePath("/costos");
   redirect(`/orden-pago/${order.id}`);
@@ -609,8 +612,16 @@ export async function generarOrdenDePagoGeneral(formData: FormData): Promise<voi
     },
   });
 
+  await enviarOrdenAlERP(order.id);
+
   revalidatePath("/costos");
   redirect(`/orden-pago/${order.id}`);
+}
+
+export async function reintentarEnvioERP(orderId: string): Promise<void> {
+  await requireFullAccess();
+  await enviarOrdenAlERP(orderId);
+  revalidatePath(`/orden-pago/${orderId}`);
 }
 
 // ---------------------------------------------------------------------------

@@ -178,6 +178,14 @@ model PaymentOrder {
   // su descripción y monto, ej. "Renta de oficina: $5,000", "Gasolina: $800".
   gastosGenerales   GastoGeneral[]
 
+  // Integración con el ERP (mhdev.posix.mx) — al generar la orden se le
+  // manda toda la info del equipo y el desglose del pago. Si falla (ERP
+  // caído, etc.) la orden se guarda igual en MH Logística y queda marcada
+  // para reintentar el envío manualmente desde la orden impresa.
+  erpEnviado        Boolean   @default(false)
+  erpError          String?
+  erpEnviadoAt      DateTime?
+
   @@index([shipmentId])
 }
 
