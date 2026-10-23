@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Shipment" ADD COLUMN     "millas" DOUBLE PRECISION NOT NULL DEFAULT 0;

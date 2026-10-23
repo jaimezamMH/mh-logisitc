@@ -93,6 +93,18 @@ export default async function NuevoEmbarquePage() {
             </label>
 
             <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Millas recorridas</span>
+              <input
+                type="number"
+                name="millas"
+                min="0"
+                step="any"
+                placeholder="Ej. 1850"
+                className="rounded-lg border border-border px-3 py-2 text-sm"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm">
               <span className="text-ink-secondary">Proveedor de compra</span>
               <SelectOrNew name="proveedorCompra" options={proveedores.proveedorCompra} />
             </label>

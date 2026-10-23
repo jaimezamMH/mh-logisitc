@@ -52,6 +52,8 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
     shipment.costoPlacas +
     shipment.costoRepuveTitulo;
 
+  const costoPorMilla = shipment.millas > 0 ? totalCostos / shipment.millas : null;
+
   const esServicio = shipment.tipoVenta === "Servicio Logístico";
   const totalPrecioServicio =
     shipment.precioFleteUSA + shipment.precioImportacion + shipment.precioFleteMx + shipment.precioPermiso +
@@ -187,6 +189,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                   ["Proveedor de compra", shipment.proveedorCompra],
                   ["Proveedor flete USA", shipment.provFleteUSA],
                   ["Agente aduanal", shipment.provAgenteAduanal],
+                  ["Millas recorridas", shipment.millas > 0 ? `${shipment.millas.toLocaleString("es-MX")} mi` : null],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <dt className="text-xs text-ink-muted">{label}</dt>
@@ -252,6 +255,18 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-ink-secondary">Fecha de cruce</span>
                 <input type="date" name="fechaCruce" defaultValue={dateInputValue(shipment.fechaCruce)} className="rounded-lg border border-border px-3 py-2 text-sm" />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">Millas recorridas</span>
+                <input
+                  type="number"
+                  name="millas"
+                  min="0"
+                  step="any"
+                  defaultValue={shipment.millas || ""}
+                  placeholder="Ej. 1850"
+                  className="rounded-lg border border-border px-3 py-2 text-sm"
+                />
               </label>
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-ink-secondary">Proveedor de compra</span>
@@ -329,6 +344,12 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                       )}
                     </span>
                   </div>
+                  {costoPorMilla !== null && (
+                    <div className="flex items-center justify-between text-xs text-ink-muted">
+                      <span>Costo por milla ({shipment.millas.toLocaleString("es-MX")} mi)</span>
+                      <span>{formatMXN(costoPorMilla)} / mi</span>
+                    </div>
+                  )}
                 </div>
               </Card>
 
@@ -475,6 +496,12 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                       <span className="text-sm text-ink-secondary">Total</span>
                       <SyncedTotal className="text-lg font-semibold text-ink-primary" />
                     </div>
+                    {costoPorMilla !== null && (
+                      <div className="col-span-2 flex items-center justify-between text-xs text-ink-muted -mt-2">
+                        <span>Costo por milla ({shipment.millas.toLocaleString("es-MX")} mi)</span>
+                        <span>{formatMXN(costoPorMilla)} / mi</span>
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="flex justify-end">

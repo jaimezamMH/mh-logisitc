@@ -85,6 +85,7 @@ export async function createShipment(formData: FormData) {
       fechaInicio: dateOrNull(formData, "fechaInicio") ?? new Date(),
       fechaSalidaProgramada: dateOrNull(formData, "fechaSalidaProgramada"),
       fechaCompra: dateOrNull(formData, "fechaCompra"),
+      millas: num(formData, "millas"),
     },
   });
 
@@ -220,6 +221,7 @@ export async function updateShipmentInfo(shipmentId: string, formData: FormData)
       fechaSalidaUSA: dateOrNull(formData, "fechaSalidaUSA"),
       fechaCruce: dateOrNull(formData, "fechaCruce"),
       incidencias: str(formData, "incidencias"),
+      millas: num(formData, "millas"),
     },
   });
 

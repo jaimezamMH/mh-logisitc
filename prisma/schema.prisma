@@ -60,6 +60,10 @@ model Shipment {
   costoRepuveTitulo Float    @default(0) // Repuve / Título — trámite de registro vehicular
   fleteMexAplica    Boolean  @default(true)
 
+  // Millas recorridas por el equipo — se captura manualmente (no hay GPS),
+  // sirve para sacar el costo promedio por milla de cada unidad.
+  millas            Float    @default(0)
+
   // Precio cobrado al cliente por cada servicio logístico (solo aplica
   // cuando tipoVenta = "Servicio Logístico"; la diferencia contra el costo
   // real de arriba es la utilidad de ese servicio).
