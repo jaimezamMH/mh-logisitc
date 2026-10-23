@@ -7,6 +7,7 @@ import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import Buscador from "@/components/Buscador";
 import EstatusTimeline from "@/components/EstatusTimeline";
 import EntregasHoyBanner from "@/components/EntregasHoyBanner";
+import CopyLinkButton from "@/components/CopyLinkButton";
 import { getReporteDiario, getReporteRango } from "@/lib/queries";
 import { formatFecha, formatMXN, coincideBusqueda } from "@/lib/constants";
 import { calcularTimelineEstatus } from "@/lib/ciclo";
@@ -515,7 +516,10 @@ export default async function ReportesPage({
                               </p>
                             </div>
                           </div>
-                          <StatusBadge estatus={s.estatus} />
+                          <div className="flex items-center gap-2 shrink-0">
+                            <CopyLinkButton folio={s.folio} />
+                            <StatusBadge estatus={s.estatus} />
+                          </div>
                         </div>
 
                         <EstatusTimeline
