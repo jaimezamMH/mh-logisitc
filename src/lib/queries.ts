@@ -554,6 +554,73 @@ export async function getCostosPromedio2026() {
   };
 }
 
+// Costo promedio por concepto, agrupado por categoría de equipo (Grúa
+// Titán, Grúa Articulada, Retroexcavadora, etc.) — para comparar, por
+// ejemplo, si el flete de una grúa articulada sale en promedio más caro
+// que el de una grúa Titán. Solo usa Shipment (la tabla CostoHistorico no
+// tiene categoría capturada). Cada promedio se calcula solo sobre los
+// registros de esa categoría con costo capturado (> 0), igual que
+// getCostosPromedio2026().
+export async function getCostosPromedioPorCategoria() {
+  const shipments = await prisma.shipment.findMany({
+    where: { categoria: { not: null } },
+  });
+
+  type Grupo = {
+    categoria: string;
+    tipoUnidad: string | null;
+    n: number;
+    fleteUSA: number[];
+    importacion: number[];
+    fleteMx: number[];
+    maniobras: number[];
+    total: number[];
+  };
+
+  const map = new Map<string, Grupo>();
+
+  for (const s of shipments) {
+    if (!s.categoria) continue;
+    const g = map.get(s.categoria) ?? {
+      categoria: s.categoria,
+      tipoUnidad: s.tipoUnidad,
+      n: 0,
+      fleteUSA: [],
+      importacion: [],
+      fleteMx: [],
+      maniobras: [],
+      total: [],
+    };
+    g.n += 1;
+    if (s.costoFleteUSA > 0) g.fleteUSA.push(s.costoFleteUSA);
+    const importacionTotal = s.costoImportacion + s.costoBondCanada;
+    if (importacionTotal > 0) g.importacion.push(importacionTotal);
+    if (s.costoFleteMx > 0) g.fleteMx.push(s.costoFleteMx);
+    if (s.costoManiobras > 0) g.maniobras.push(s.costoManiobras);
+    const totalCostos =
+      s.costoFleteUSA + importacionTotal + s.costoFleteMx + s.costoManiobras +
+      s.costoPermiso + s.costoSeguro + s.costoPlacas + s.costoRepuveTitulo;
+    if (totalCostos > 0) g.total.push(totalCostos);
+    map.set(s.categoria, g);
+  }
+
+  const avg = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+
+  const filas = Array.from(map.values()).map((g) => ({
+    categoria: g.categoria,
+    tipoUnidad: g.tipoUnidad,
+    n: g.n,
+    fleteUSA: { promedio: avg(g.fleteUSA), n: g.fleteUSA.length },
+    importacion: { promedio: avg(g.importacion), n: g.importacion.length },
+    fleteMx: { promedio: avg(g.fleteMx), n: g.fleteMx.length },
+    maniobras: { promedio: avg(g.maniobras), n: g.maniobras.length },
+    costoTotalPromedio: avg(g.total),
+  }));
+
+  filas.sort((a, b) => b.n - a.n);
+  return filas;
+}
+
 export async function getVentasPorVendedor() {
   const sales = await prisma.sale.findMany({ where: { origenDato: "app" } });
   const map = new Map<string, number>();

@@ -5,6 +5,7 @@ import PrintButton from "@/components/PrintButton";
 import {
   getCicloPromedioPorMes,
   getCostosPromedio2026,
+  getCostosPromedioPorCategoria,
   getRendimientoProveedores,
   getTiempoPromedioPorEtapa,
 } from "@/lib/queries";
@@ -83,11 +84,12 @@ function TablaRendimientoProveedor({
 }
 
 export default async function AnaliticaPage() {
-  const [ciclo, proveedores, costos, tiempoPorEtapa] = await Promise.all([
+  const [ciclo, proveedores, costos, tiempoPorEtapa, costosPorCategoria] = await Promise.all([
     getCicloPromedioPorMes(),
     getRendimientoProveedores(),
     getCostosPromedio2026(),
     getTiempoPromedioPorEtapa(),
+    getCostosPromedioPorCategoria(),
   ]);
 
   const maxEtapaDias = Math.max(
@@ -159,6 +161,55 @@ export default async function AnaliticaPage() {
               </ul>
             )}
           </div>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Costo promedio por categoría de equipo"
+            subtitle="Flete USA, Importación, Flete México y Maniobra/Reparación promedio, según el tipo de máquina"
+          />
+          {costosPorCategoria.length === 0 ? (
+            <EmptyState text="Aún no hay unidades con categoría y costos capturados." />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-ink-muted border-b border-border">
+                    <th className="px-5 py-2.5 font-medium">Categoría</th>
+                    <th className="px-5 py-2.5 font-medium text-right">Unidades</th>
+                    <th className="px-5 py-2.5 font-medium text-right">Flete USA prom.</th>
+                    <th className="px-5 py-2.5 font-medium text-right">Importación prom.</th>
+                    <th className="px-5 py-2.5 font-medium text-right">Flete Mx prom.</th>
+                    <th className="px-5 py-2.5 font-medium text-right">Maniobra prom.</th>
+                    <th className="px-5 py-2.5 font-medium text-right">Costo total prom.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {costosPorCategoria.map((c) => (
+                    <tr key={c.categoria} className="border-b border-border last:border-0 hover:bg-surface-muted">
+                      <td className="px-5 py-2.5 font-medium text-ink-primary">{c.categoria}</td>
+                      <td className="px-5 py-2.5 text-right">{c.n}</td>
+                      <td className="px-5 py-2.5 text-right">
+                        {c.fleteUSA.n > 0 ? formatMXN(c.fleteUSA.promedio) : "—"}
+                      </td>
+                      <td className="px-5 py-2.5 text-right">
+                        {c.importacion.n > 0 ? formatMXN(c.importacion.promedio) : "—"}
+                      </td>
+                      <td className="px-5 py-2.5 text-right">
+                        {c.fleteMx.n > 0 ? formatMXN(c.fleteMx.promedio) : "—"}
+                      </td>
+                      <td className="px-5 py-2.5 text-right">
+                        {c.maniobras.n > 0 ? formatMXN(c.maniobras.promedio) : "—"}
+                      </td>
+                      <td className="px-5 py-2.5 text-right font-semibold text-ink-primary">
+                        {c.costoTotalPromedio > 0 ? formatMXN(c.costoTotalPromedio) : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
