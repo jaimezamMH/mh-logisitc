@@ -29,7 +29,8 @@ import { prisma } from "@/lib/prisma";
 //   "provAgenteAduanal": "...",
 //   "fechaInicio": "2026-10-23",     // fecha ISO (yyyy-mm-dd) u otro formato que Date() entienda
 //   "fechaSalidaProgramada": "...",
-//   "millas": 0
+//   "millas": 0,
+//   "fotoUrl": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."   // foto del equipo, como data URL (no un link externo)
 // }
 
 async function nextFolio() {
@@ -73,6 +74,14 @@ export async function POST(req: NextRequest) {
 
   const erpId = str(body.erpId);
 
+  const fotoUrl = str(body.fotoUrl);
+  if (fotoUrl && !fotoUrl.startsWith("data:image/")) {
+    return NextResponse.json(
+      { ok: false, error: "fotoUrl inválida — debe ser una data URL (data:image/...), no un link externo." },
+      { status: 400 }
+    );
+  }
+
   const datos = {
     equipoDescripcion: str(body.equipoDescripcion) ?? "Equipo sin descripción",
     categoria: str(body.categoria) ?? null,
@@ -89,6 +98,7 @@ export async function POST(req: NextRequest) {
     provAgenteAduanal: str(body.provAgenteAduanal) ?? null,
     fechaSalidaProgramada: dateOrNull(body.fechaSalidaProgramada),
     millas: num(body.millas),
+    ...(fotoUrl ? { fotoUrl } : {}),
   };
 
   try {
