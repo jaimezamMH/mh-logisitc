@@ -19,6 +19,13 @@ export function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Endpoints para la integración con el ERP (mhdev.posix.mx) — los llama un
+  // servidor, no una persona en el navegador, así que no tienen la cookie de
+  // acceso. Van sin la clave de la app a propósito (decisión de Jaime).
+  if (pathname.startsWith("/api/erp")) {
+    return NextResponse.next();
+  }
+
   const rol = rolDesdeCookie(req.cookies.get(AUTH_COOKIE)?.value);
   if (!rol) {
     const url = req.nextUrl.clone();

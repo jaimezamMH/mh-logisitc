@@ -64,6 +64,11 @@ model Shipment {
   // sirve para sacar el costo promedio por milla de cada unidad.
   millas            Float    @default(0)
 
+  // ID de esta unidad en el ERP (mhdev.posix.mx) — para correlacionar el
+  // registro de allá con el de aquí. Único: si el ERP reenvía la misma
+  // unidad (reintento, etc.), se actualiza en vez de duplicarla.
+  erpId             String?  @unique
+
   // Precio cobrado al cliente por cada servicio logístico (solo aplica
   // cuando tipoVenta = "Servicio Logístico"; la diferencia contra el costo
   // real de arriba es la utilidad de ese servicio).

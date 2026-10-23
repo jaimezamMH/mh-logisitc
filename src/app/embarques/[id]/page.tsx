@@ -190,6 +190,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                   ["Proveedor flete USA", shipment.provFleteUSA],
                   ["Agente aduanal", shipment.provAgenteAduanal],
                   ["Millas recorridas", shipment.millas > 0 ? `${shipment.millas.toLocaleString("es-MX")} mi` : null],
+                  ["ID en el ERP", shipment.erpId],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <dt className="text-xs text-ink-muted">{label}</dt>
@@ -265,6 +266,15 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                   step="any"
                   defaultValue={shipment.millas || ""}
                   placeholder="Ej. 1850"
+                  className="rounded-lg border border-border px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-ink-secondary">ID en el ERP</span>
+                <input
+                  name="erpId"
+                  defaultValue={shipment.erpId ?? ""}
+                  placeholder="Se llena solo si viene del ERP"
                   className="rounded-lg border border-border px-3 py-2 text-sm"
                 />
               </label>

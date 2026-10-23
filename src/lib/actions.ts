@@ -223,6 +223,7 @@ export async function updateShipmentInfo(shipmentId: string, formData: FormData)
       fechaCruce: dateOrNull(formData, "fechaCruce"),
       incidencias: str(formData, "incidencias"),
       millas: num(formData, "millas"),
+      erpId: str(formData, "erpId") ?? null,
     },
   });
 
