@@ -11,10 +11,9 @@ function analizarTiempoPorEtapa(data: Fila[]) {
   const top = validas[0]; // ya viene ordenado de mayor a menor promedio
   const segundo = validas[1];
 
-  let texto = `"${top.estatus}" es, por mucho, donde más se tardan los equipos: en promedio ${top.promedioDias} día${top.promedioDias === 1 ? "" : "s"}, contando ${top.n} equipo${top.n === 1 ? "" : "s"} que ya salió de ahí. Es la etapa donde más conviene enfocar esfuerzos para acelerar la entrega.`;
-  if (segundo) {
-    texto += ` Le sigue "${segundo.estatus}", con ${segundo.promedioDias} día${segundo.promedioDias === 1 ? "" : "s"} en promedio.`;
-  }
+  let texto = `Donde más se atoran: "${top.estatus}" (${top.promedioDias} día${top.promedioDias === 1 ? "" : "s"} prom.)`;
+  if (segundo) texto += `, luego "${segundo.estatus}" (${segundo.promedioDias} día${segundo.promedioDias === 1 ? "" : "s"}).`;
+  else texto += ".";
   return texto;
 }
 
@@ -38,14 +37,8 @@ export default function TiempoPorEtapaCard({
           <EmptyState text={emptyText} />
         ) : (
           <>
-            <p className="text-sm text-ink-secondary bg-surface-muted rounded-lg px-3 py-2.5">
-              <span className="font-semibold text-ink-primary">¿Cómo leer esto? </span>
-              Cada etapa es un paso del proceso (Pendiente → Flete USA → Parking/Patio → Importación/Aduana →
-              Agencia → Flete México → Entregado). El número de días es el <span className="font-medium">promedio
-              de tiempo</span> que un equipo se quedó en esa etapa antes de pasar a la siguiente — contando solo
-              equipos que YA la completaron ("ya resueltas"); los que siguen ahí mismo en este momento no cuentan
-              todavía porque no se sabe cuánto van a durar en total. Mientras más larga la barra, más tiempo se
-              quedan ahí en promedio: es donde el proceso se "atora" más.
+            <p className="text-xs text-ink-muted">
+              Días promedio que tarda un equipo en cada etapa antes de avanzar. Barra más larga = más atorado.
             </p>
 
             <ul className="space-y-3">
@@ -73,11 +66,7 @@ export default function TiempoPorEtapaCard({
               })}
             </ul>
 
-            {analisis && (
-              <p className="text-sm text-ink-secondary bg-brand-blue-50 border border-brand-blue-100 rounded-lg px-3 py-2.5">
-                {analisis}
-              </p>
-            )}
+            {analisis && <p className="text-xs text-ink-secondary font-medium">{analisis}</p>}
           </>
         )}
       </div>
