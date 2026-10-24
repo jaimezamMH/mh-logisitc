@@ -129,7 +129,7 @@ export default async function AnaliticaPage() {
         <Card>
           <CardHeader
             title="Tiempo promedio por etapa"
-            subtitle="Dónde se detienen más los procesos — calculado solo con unidades YA entregadas (ciclo completo), no con las que siguen activas"
+            subtitle="Dónde se detienen más los procesos — el promedio solo cuenta unidades que YA salieron de esa etapa; las que siguen ahí mismo en este momento se muestran aparte, como 'en curso', porque todavía no se sabe cuánto van a durar en total"
           />
           <div className="p-5">
             {tiempoPorEtapa.length === 0 ? (
@@ -145,8 +145,11 @@ export default async function AnaliticaPage() {
                         <span className="text-ink-primary font-medium">{info.label}</span>
                         <span className="text-ink-secondary">
                           {e.promedioDias != null
-                            ? `${e.promedioDias} día${e.promedioDias === 1 ? "" : "s"} promedio · ${e.n} unidad${e.n === 1 ? "" : "es"} entregada${e.n === 1 ? "" : "s"}`
+                            ? `${e.promedioDias} día${e.promedioDias === 1 ? "" : "s"} promedio · ${e.n} ya resuelta${e.n === 1 ? "" : "s"}`
                             : "Sin promedio todavía"}
+                          {e.enCurso > 0 && (
+                            <span className="text-ink-muted"> · {e.enCurso} en curso ahora</span>
+                          )}
                         </span>
                       </div>
                       <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
