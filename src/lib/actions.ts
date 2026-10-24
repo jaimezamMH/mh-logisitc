@@ -199,6 +199,57 @@ export async function updateShipmentEstatusForm(shipmentId: string, formData: Fo
   await updateShipmentEstatus(shipmentId, nuevoEstatus, usuario, comentario);
 }
 
+// Para capturar a mano, con fecha real pasada, una etapa por la que ya cruzó
+// la unidad pero que no se registró en su momento (ej. una unidad que llega
+// al sistema ya avanzada, o a la que se le saltaron pasos al cambiar su
+// estatus) — así "Tiempo promedio por etapa" en Reportes/Analítica sale con
+// datos más completos. A propósito NO toca el estatus actual de la unidad
+// ni su fechaEntrega: es solo historial, no un cambio de estatus real.
+export async function agregarStatusEventManual(shipmentId: string, formData: FormData) {
+  await requireFullAccess();
+  const estatusNuevo = str(formData, "estatus");
+  const fecha = dateOrNull(formData, "fecha");
+  if (!estatusNuevo || !fecha) throw new Error("Falta el estatus o la fecha.");
+
+  await prisma.statusEvent.create({
+    data: {
+      shipmentId,
+      estatusNuevo,
+      fecha,
+      usuario: str(formData, "usuario") ?? "Sistema",
+      comentario: str(formData, "comentario"),
+    },
+  });
+
+  revalidatePath(`/embarques/${shipmentId}`);
+  revalidatePath("/reportes");
+  revalidatePath("/analitica");
+}
+
+export async function editarStatusEvent(eventId: string, formData: FormData) {
+  await requireFullAccess();
+  const estatusNuevo = str(formData, "estatus");
+  const fecha = dateOrNull(formData, "fecha");
+  if (!estatusNuevo || !fecha) throw new Error("Falta el estatus o la fecha.");
+
+  const evento = await prisma.statusEvent.update({
+    where: { id: eventId },
+    data: { estatusNuevo, fecha, comentario: str(formData, "comentario") },
+  });
+
+  revalidatePath(`/embarques/${evento.shipmentId}`);
+  revalidatePath("/reportes");
+  revalidatePath("/analitica");
+}
+
+export async function eliminarStatusEvent(eventId: string) {
+  await requireFullAccess();
+  const evento = await prisma.statusEvent.delete({ where: { id: eventId } });
+  revalidatePath(`/embarques/${evento.shipmentId}`);
+  revalidatePath("/reportes");
+  revalidatePath("/analitica");
+}
+
 export async function updateShipmentInfo(shipmentId: string, formData: FormData) {
   await requireFullAccess();
   await prisma.shipment.update({

@@ -11,6 +11,7 @@ import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import FotoEquipo from "@/components/FotoEquipo";
 import DocumentosEmbarque from "@/components/DocumentosEmbarque";
 import EstatusTimeline from "@/components/EstatusTimeline";
+import HistorialEstatusEditable from "@/components/HistorialEstatusEditable";
 import CategoriaTipoSelect from "@/components/CategoriaTipoSelect";
 import { getShipment, getProveedores } from "@/lib/queries";
 import { esSoloLectura } from "@/lib/auth-server";
@@ -702,38 +703,13 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
 
           {/* Historial de estatus */}
           <Card>
-            <CardHeader title="Historial de estatus" />
-            {shipment.statusEvents.length === 0 ? (
-              <EmptyState text="Sin movimientos registrados." />
-            ) : (
-              <ul className="divide-y divide-border">
-                {shipment.statusEvents.map((e) => {
-                  const dur = duracionPorEvento.get(e.id);
-                  return (
-                    <li key={e.id} className="px-5 py-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm text-ink-primary">
-                          {e.estatusAnterior ? `${e.estatusAnterior} → ` : ""}
-                          <span className="font-medium">{e.estatusNuevo}</span>
-                        </p>
-                        {dur && (
-                          <span
-                            className={`inline-flex items-center gap-1 text-xs font-medium shrink-0 ${
-                              dur.enCurso ? "text-brand-orange-700" : "text-ink-secondary"
-                            }`}
-                          >
-                            ⏱ {dur.dias} día{dur.dias === 1 ? "" : "s"} {dur.enCurso ? "(en curso)" : "en esta etapa"}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-ink-muted mt-0.5">
-                        {e.usuario ?? "Sistema"} · {formatFecha(e.fecha)} {e.comentario ? `· ${e.comentario}` : ""}
-                      </p>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+            <CardHeader title="Historial de estatus" subtitle={soloLectura ? undefined : "Puedes editar fechas o agregar etapas pasadas que no se registraron a tiempo"} />
+            <HistorialEstatusEditable
+              shipmentId={shipment.id}
+              eventos={shipment.statusEvents}
+              duracionPorEvento={Object.fromEntries(duracionPorEvento)}
+              soloLectura={soloLectura}
+            />
           </Card>
         </div>
       </main>
