@@ -160,18 +160,20 @@ export async function updateShipmentEstatus(
   shipmentId: string,
   nuevoEstatus: string,
   usuario: string,
-  comentario?: string
+  comentario?: string,
+  fecha?: Date
 ) {
   await requireFullAccess();
   const current = await prisma.shipment.findUnique({ where: { id: shipmentId } });
   if (!current) throw new Error("Embarque no encontrado");
+  const fechaMovimiento = fecha ?? new Date();
 
   await prisma.$transaction([
     prisma.shipment.update({
       where: { id: shipmentId },
       data: {
         estatus: nuevoEstatus,
-        fechaEntrega: nuevoEstatus === "Entregado" ? new Date() : current.fechaEntrega,
+        fechaEntrega: nuevoEstatus === "Entregado" ? fechaMovimiento : current.fechaEntrega,
       },
     }),
     prisma.statusEvent.create({
@@ -181,6 +183,7 @@ export async function updateShipmentEstatus(
         estatusNuevo: nuevoEstatus,
         usuario,
         comentario,
+        fecha: fechaMovimiento,
       },
     }),
   ]);
@@ -195,8 +198,9 @@ export async function updateShipmentEstatusForm(shipmentId: string, formData: Fo
   const nuevoEstatus = str(formData, "estatus");
   const usuario = str(formData, "usuario") ?? "Sistema";
   const comentario = str(formData, "comentario");
+  const fecha = dateOrNull(formData, "fecha") ?? undefined;
   if (!nuevoEstatus) return;
-  await updateShipmentEstatus(shipmentId, nuevoEstatus, usuario, comentario);
+  await updateShipmentEstatus(shipmentId, nuevoEstatus, usuario, comentario, fecha);
 }
 
 // Para capturar a mano, con fecha real pasada, una etapa por la que ya cruzó

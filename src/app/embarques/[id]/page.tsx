@@ -158,8 +158,13 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                   </button>
                 ))}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <UserSelect name="usuario" label="Registrado por" />
+                <label className="flex flex-col gap-1 text-sm">
+                  <span className="text-ink-secondary">Fecha del movimiento</span>
+                  <input type="date" name="fecha" defaultValue={dateInputValue(new Date())} className="rounded-lg border border-border px-3 py-2 text-sm" />
+                  <span className="text-xs text-ink-muted">Normalmente déjala en hoy — solo cámbiala si estás capturando algo que ya pasó</span>
+                </label>
                 <label className="flex flex-col gap-1 text-sm">
                   <span className="text-ink-secondary">Comentario del cambio (opcional)</span>
                   <input name="comentario" className="rounded-lg border border-border px-3 py-2 text-sm" placeholder="Ej. Cruzó en Calexico" />
