@@ -770,6 +770,11 @@ export default async function ReportesPage({
                             </span>
                             <ClockBadge fechaInicio={s.fechaInicio} fechaEntrega={s.fechaEntrega} tiempoCicloDias={s.tiempoCicloDias} />
                           </p>
+                          {s.incidencias && (
+                            <p className="text-xs text-brand-orange-700 bg-brand-orange-50 rounded px-2 py-1 mt-1 inline-block">
+                              {s.incidencias}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <p className="text-xs text-ink-muted shrink-0">{formatFecha(s.fechaEntrega)}</p>
