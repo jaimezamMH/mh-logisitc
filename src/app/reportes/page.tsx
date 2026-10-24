@@ -8,6 +8,7 @@ import Buscador from "@/components/Buscador";
 import EstatusTimeline from "@/components/EstatusTimeline";
 import EntregasHoyBanner from "@/components/EntregasHoyBanner";
 import CopyLinkButton from "@/components/CopyLinkButton";
+import IndiceComplejidadCard from "@/components/IndiceComplejidadCard";
 import { getReporteDiario, getReporteRango } from "@/lib/queries";
 import { formatFecha, formatMXN, coincideBusqueda } from "@/lib/constants";
 import { calcularTimelineEstatus } from "@/lib/ciclo";
@@ -709,6 +710,13 @@ export default async function ReportesPage({
 
             {vista === "mensual" && <CostoPromedio costos={activo.costoPromedioPorConcepto} />}
             {vista === "mensual" && <CostosPorCategoria filas={activo.costosPorCategoria} />}
+            {vista === "mensual" && (
+              <IndiceComplejidadCard
+                resumen={activo.indiceComplejidad.resumen}
+                porCategoria={activo.indiceComplejidad.porCategoria}
+                subtitle="1 = corto y simple · 2 = trayecto largo (>1500 millas) · 3 = necesita cama baja — de las unidades entregadas este mes"
+              />
+            )}
 
             <PagosPorProveedor
               proveedoresFleteUSA={activo.proveedoresFleteUSA}

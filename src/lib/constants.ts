@@ -232,6 +232,23 @@ export const CATEGORIAS_AMARILLO = [
   "Otros / Accesorios",
 ] as const;
 
+// Categorías que por su tamaño/forma se tienen que levantar en cama baja
+// (no se pueden manejar/remolcar como un camión normal) — van siempre en
+// índice de complejidad 3, sin importar las millas. Confirmado con Jaime:
+// "Topador" ya se captura como "Cargador Frontal" en el sistema.
+export const CATEGORIAS_CAMA_BAJA = ["Excavadora", "Cargador Frontal", "Otros / Accesorios"] as const;
+
+// Índice de complejidad de carga (1 a 3), según categoría y millas recorridas:
+// 3 = necesita cama baja (ver CATEGORIAS_CAMA_BAJA), sin importar las millas.
+// 2 = más de 1500 millas (cualquier equipo que no necesite cama baja).
+// 1 = 1500 millas o menos (cualquier equipo que no necesite cama baja).
+// Regresa null si no hay categoría capturada (no se puede clasificar).
+export function indiceComplejidad(categoria: string | null | undefined, millas: number): 1 | 2 | 3 | null {
+  if (!categoria) return null;
+  if ((CATEGORIAS_CAMA_BAJA as readonly string[]).includes(categoria)) return 3;
+  return millas > 1500 ? 2 : 1;
+}
+
 export const MESES = [
   "Enero",
   "Febrero",

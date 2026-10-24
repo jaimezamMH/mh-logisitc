@@ -2,10 +2,12 @@ import TopBar from "@/components/TopBar";
 import { Card, CardHeader, EmptyState, StatCard } from "@/components/ui";
 import CicloPorMesChart from "@/components/charts/CicloPorMesChart";
 import PrintButton from "@/components/PrintButton";
+import IndiceComplejidadCard from "@/components/IndiceComplejidadCard";
 import {
   getCicloPromedioPorMes,
   getCostosPromedio2026,
   getCostosPromedioPorCategoria,
+  getIndiceComplejidad,
   getRendimientoProveedores,
   getTiempoPromedioPorEtapa,
 } from "@/lib/queries";
@@ -84,12 +86,13 @@ function TablaRendimientoProveedor({
 }
 
 export default async function AnaliticaPage() {
-  const [ciclo, proveedores, costos, tiempoPorEtapa, costosPorCategoria] = await Promise.all([
+  const [ciclo, proveedores, costos, tiempoPorEtapa, costosPorCategoria, complejidad] = await Promise.all([
     getCicloPromedioPorMes(),
     getRendimientoProveedores(),
     getCostosPromedio2026(),
     getTiempoPromedioPorEtapa(),
     getCostosPromedioPorCategoria(),
+    getIndiceComplejidad(),
   ]);
 
   const maxEtapaDias = Math.max(
@@ -211,6 +214,12 @@ export default async function AnaliticaPage() {
             </div>
           )}
         </Card>
+
+        <IndiceComplejidadCard
+          resumen={complejidad.resumen}
+          porCategoria={complejidad.porCategoria}
+          subtitle="1 = corto y simple · 2 = trayecto largo (>1500 millas) · 3 = necesita cama baja — histórico completo"
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <TablaRendimientoProveedor

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { ESTATUS_ACTIVOS, MESES, diasEnProceso } from "@/lib/constants";
+import { ESTATUS_ACTIVOS, MESES, diasEnProceso, indiceComplejidad } from "@/lib/constants";
 
 // Las fechas "solo día" (ej. fechaSalidaProgramada) se guardan como
 // medianoche UTC al venir de strings "YYYY-MM-DD". Por eso aquí también
@@ -639,6 +639,42 @@ export async function getCostosPromedioPorCategoria() {
   return costosPromedioPorCategoriaDe(shipments);
 }
 
+// Índice de complejidad de carga (1 a 3) — ver indiceComplejidad() en
+// constants.ts para las reglas. Agrupa por categoría + complejidad (una
+// misma categoría puede caer en más de un nivel si no es de cama baja,
+// según las millas de cada unidad) y da también el resumen total por nivel.
+type ShipmentConComplejidad = { categoria: string | null; millas: number };
+
+function indiceComplejidadDe(shipments: ShipmentConComplejidad[]) {
+  type Fila = { categoria: string; complejidad: 1 | 2 | 3; n: number };
+  const map = new Map<string, Fila>();
+  const resumen = { 1: 0, 2: 0, 3: 0 };
+
+  for (const s of shipments) {
+    const nivel = indiceComplejidad(s.categoria, s.millas);
+    if (nivel == null || !s.categoria) continue;
+    const key = `${s.categoria}::${nivel}`;
+    const fila = map.get(key) ?? { categoria: s.categoria, complejidad: nivel, n: 0 };
+    fila.n += 1;
+    map.set(key, fila);
+    resumen[nivel] += 1;
+  }
+
+  const porCategoria = Array.from(map.values()).sort((a, b) =>
+    a.complejidad !== b.complejidad ? a.complejidad - b.complejidad : b.n - a.n
+  );
+
+  return { porCategoria, resumen };
+}
+
+export async function getIndiceComplejidad() {
+  const shipments = await prisma.shipment.findMany({
+    where: { categoria: { not: null } },
+    select: { categoria: true, millas: true },
+  });
+  return indiceComplejidadDe(shipments);
+}
+
 export async function getVentasPorVendedor() {
   const sales = await prisma.sale.findMany({ where: { origenDato: "app" } });
   const map = new Map<string, number>();
@@ -865,6 +901,7 @@ export async function getReporteRango(from: Date, to: Date) {
   // de este periodo — pedido por Jaime para el reporte mensual que va a
   // dirección.
   const costosPorCategoria = costosPromedioPorCategoriaDe(entregas);
+  const indiceComplejidadResumen = indiceComplejidadDe(entregas);
 
   return {
     from,
@@ -883,5 +920,6 @@ export async function getReporteRango(from: Date, to: Date) {
     diasEnAgenciaPromedio,
     etapasPromedio,
     costosPorCategoria,
+    indiceComplejidad: indiceComplejidadResumen,
   };
 }
