@@ -37,10 +37,6 @@ export default function TiempoPorEtapaCard({
           <EmptyState text={emptyText} />
         ) : (
           <>
-            <p className="text-xs text-ink-muted">
-              Días promedio que tarda un equipo en cada etapa antes de avanzar. Barra más larga = más atorado.
-            </p>
-
             <ul className="space-y-3">
               {data.map((e) => {
                 const info = estatusInfo(e.estatus);
