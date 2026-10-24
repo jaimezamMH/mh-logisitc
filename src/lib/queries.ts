@@ -399,38 +399,38 @@ export async function getMapShipments() {
 
 export async function getTiempoPromedioPorEtapa() {
   const { calcularDuracionPorEtapa } = await import("@/lib/ciclo");
+
+  // Jaime pidió que este promedio refleje el ciclo COMPLETO histórico —
+  // solo unidades YA entregadas, no las que siguen activas (una unidad
+  // activa todavía puede atorarse más adelante, así que mezclar sus etapas
+  // ya resueltas con las de ciclos completos sesgaba el promedio). Por eso
+  // se filtra por estatus "Entregado" desde la consulta.
   const shipments = await prisma.shipment.findMany({
+    where: { estatus: "Entregado" },
     select: { fechaEntrega: true, statusEvents: { select: { id: true, estatusNuevo: true, fecha: true } } },
   });
 
-  // "n" (movimientos) solo cuenta los pasos por una etapa que YA TERMINARON
-  // (la unidad avanzó a la siguiente etapa) — de ahí sale el promedio de
-  // días, porque ya se sabe cuánto duró completo. Las unidades que SIGUEN
-  // ahí mismo en este momento (enCurso) no se pueden promediar todavía (no
-  // se sabe cuánto van a durar en total), pero se cuentan aparte en
-  // "enCurso" para que no parezca que "faltan" unidades.
-  const porEtapa = new Map<string, { suma: number; n: number; enCurso: number }>();
+  // Nota: las unidades históricas sembradas del PDF original solo tienen UN
+  // StatusEvent (el de "Entregado", sin desglose intermedio), así que no
+  // aportan nada aquí — este promedio solo crece con unidades que se
+  // movieron etapa por etapa dentro de la app desde que se dieron de alta.
+  const porEtapa = new Map<string, { suma: number; n: number }>();
   for (const s of shipments) {
     const duraciones = calcularDuracionPorEtapa(s.statusEvents, s.fechaEntrega);
     for (const d of duraciones) {
       if (d.estatus === "Entregado") continue; // etapa final: no "dura", ya se cerró el ciclo
-      const entry = porEtapa.get(d.estatus) ?? { suma: 0, n: 0, enCurso: 0 };
-      if (d.enCurso) {
-        entry.enCurso += 1;
-      } else {
-        entry.suma += d.dias;
-        entry.n += 1;
-      }
+      const entry = porEtapa.get(d.estatus) ?? { suma: 0, n: 0 };
+      entry.suma += d.dias;
+      entry.n += 1;
       porEtapa.set(d.estatus, entry);
     }
   }
 
   return Array.from(porEtapa.entries())
-    .map(([estatus, { suma, n, enCurso }]) => ({
+    .map(([estatus, { suma, n }]) => ({
       estatus,
       promedioDias: n > 0 ? Math.round((suma / n) * 10) / 10 : null,
       n,
-      enCurso,
     }))
     .sort((a, b) => (b.promedioDias ?? 0) - (a.promedioDias ?? 0));
 }
