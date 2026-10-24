@@ -557,15 +557,26 @@ export async function getCostosPromedio2026() {
 // Costo promedio por concepto, agrupado por categoría de equipo (Grúa
 // Titán, Grúa Articulada, Retroexcavadora, etc.) — para comparar, por
 // ejemplo, si el flete de una grúa articulada sale en promedio más caro
-// que el de una grúa Titán. Solo usa Shipment (la tabla CostoHistorico no
-// tiene categoría capturada). Cada promedio se calcula solo sobre los
+// que el de una grúa Titán. Cada promedio se calcula solo sobre los
 // registros de esa categoría con costo capturado (> 0), igual que
-// getCostosPromedio2026().
-export async function getCostosPromedioPorCategoria() {
-  const shipments = await prisma.shipment.findMany({
-    where: { categoria: { not: null } },
-  });
+// getCostosPromedio2026(). Factorizado en una función compartida para
+// poder usarse tanto con TODAS las unidades (Analítica) como con solo las
+// entregadas de un periodo (Reportes → mensual, reporte para dirección).
+type ShipmentConCategoria = {
+  categoria: string | null;
+  tipoUnidad: string | null;
+  costoFleteUSA: number;
+  costoImportacion: number;
+  costoBondCanada?: number;
+  costoFleteMx: number;
+  costoManiobras: number;
+  costoPermiso: number;
+  costoSeguro: number;
+  costoPlacas: number;
+  costoRepuveTitulo: number;
+};
 
+function costosPromedioPorCategoriaDe(shipments: ShipmentConCategoria[]) {
   type Grupo = {
     categoria: string;
     tipoUnidad: string | null;
@@ -593,7 +604,7 @@ export async function getCostosPromedioPorCategoria() {
     };
     g.n += 1;
     if (s.costoFleteUSA > 0) g.fleteUSA.push(s.costoFleteUSA);
-    const importacionTotal = s.costoImportacion + s.costoBondCanada;
+    const importacionTotal = s.costoImportacion + (s.costoBondCanada ?? 0);
     if (importacionTotal > 0) g.importacion.push(importacionTotal);
     if (s.costoFleteMx > 0) g.fleteMx.push(s.costoFleteMx);
     if (s.costoManiobras > 0) g.maniobras.push(s.costoManiobras);
@@ -619,6 +630,13 @@ export async function getCostosPromedioPorCategoria() {
 
   filas.sort((a, b) => b.n - a.n);
   return filas;
+}
+
+export async function getCostosPromedioPorCategoria() {
+  const shipments = await prisma.shipment.findMany({
+    where: { categoria: { not: null } },
+  });
+  return costosPromedioPorCategoriaDe(shipments);
 }
 
 export async function getVentasPorVendedor() {
@@ -842,6 +860,12 @@ export async function getReporteRango(from: Date, to: Date) {
     .map(([estatus, { suma, n }]) => ({ estatus, promedioDias: Math.round((suma / n) * 10) / 10, n }))
     .sort((a, b) => b.promedioDias - a.promedioDias);
 
+  // Mismo desglose de "Costo promedio por categoría de equipo" que ya existe
+  // en Analítica (todo el histórico), pero acotado a las unidades entregadas
+  // de este periodo — pedido por Jaime para el reporte mensual que va a
+  // dirección.
+  const costosPorCategoria = costosPromedioPorCategoriaDe(entregas);
+
   return {
     from,
     to,
@@ -858,5 +882,6 @@ export async function getReporteRango(from: Date, to: Date) {
     cicloPromedioDias,
     diasEnAgenciaPromedio,
     etapasPromedio,
+    costosPorCategoria,
   };
 }

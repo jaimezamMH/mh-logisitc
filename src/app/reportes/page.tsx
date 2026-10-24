@@ -154,6 +154,63 @@ function CostoPromedio({
   );
 }
 
+function CostosPorCategoria({
+  filas,
+}: {
+  filas: {
+    categoria: string;
+    n: number;
+    fleteUSA: { promedio: number; n: number };
+    importacion: { promedio: number; n: number };
+    fleteMx: { promedio: number; n: number };
+    maniobras: { promedio: number; n: number };
+    costoTotalPromedio: number;
+  }[];
+}) {
+  return (
+    <Card>
+      <CardHeader
+        title="Costo promedio por categoría de equipo"
+        subtitle="Flete USA, Importación, Flete México y Maniobra/Reparación promedio, de las unidades entregadas este mes"
+      />
+      {filas.length === 0 ? (
+        <EmptyState text="Sin unidades entregadas con categoría este mes." />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-ink-muted border-b border-border">
+                <th className="px-5 py-2.5 font-medium">Categoría</th>
+                <th className="px-5 py-2.5 font-medium text-right">Unidades</th>
+                <th className="px-5 py-2.5 font-medium text-right">Flete USA prom.</th>
+                <th className="px-5 py-2.5 font-medium text-right">Importación prom.</th>
+                <th className="px-5 py-2.5 font-medium text-right">Flete Mx prom.</th>
+                <th className="px-5 py-2.5 font-medium text-right">Maniobra prom.</th>
+                <th className="px-5 py-2.5 font-medium text-right">Costo total prom.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map((c) => (
+                <tr key={c.categoria} className="border-b border-border last:border-0 hover:bg-surface-muted">
+                  <td className="px-5 py-2.5 font-medium text-ink-primary">{c.categoria}</td>
+                  <td className="px-5 py-2.5 text-right">{c.n}</td>
+                  <td className="px-5 py-2.5 text-right">{c.fleteUSA.n > 0 ? formatMXN(c.fleteUSA.promedio) : "—"}</td>
+                  <td className="px-5 py-2.5 text-right">{c.importacion.n > 0 ? formatMXN(c.importacion.promedio) : "—"}</td>
+                  <td className="px-5 py-2.5 text-right">{c.fleteMx.n > 0 ? formatMXN(c.fleteMx.promedio) : "—"}</td>
+                  <td className="px-5 py-2.5 text-right">{c.maniobras.n > 0 ? formatMXN(c.maniobras.promedio) : "—"}</td>
+                  <td className="px-5 py-2.5 text-right font-semibold text-ink-primary">
+                    {c.costoTotalPromedio > 0 ? formatMXN(c.costoTotalPromedio) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function analisisCiclo(etapasPromedio: { estatus: string; promedioDias: number; n: number }[]) {
   // "Agencia" se queda aparte del ciclo logístico (ver arriba) — se excluye
   // de este análisis porque ya tiene su propio dato (Promedio en Agencia).
@@ -651,6 +708,7 @@ export default async function ReportesPage({
             <CostosPorConcepto costos={activo.costosPorConcepto} fuente={activo.costosPorConceptoFuente} />
 
             {vista === "mensual" && <CostoPromedio costos={activo.costoPromedioPorConcepto} />}
+            {vista === "mensual" && <CostosPorCategoria filas={activo.costosPorCategoria} />}
 
             <PagosPorProveedor
               proveedoresFleteUSA={activo.proveedoresFleteUSA}
