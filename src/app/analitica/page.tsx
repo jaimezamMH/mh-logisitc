@@ -3,6 +3,7 @@ import { Card, CardHeader, EmptyState, StatCard } from "@/components/ui";
 import CicloPorMesChart from "@/components/charts/CicloPorMesChart";
 import PrintButton from "@/components/PrintButton";
 import IndiceComplejidadCard from "@/components/IndiceComplejidadCard";
+import TiempoPorEtapaCard from "@/components/TiempoPorEtapaCard";
 import {
   getCicloPromedioPorMes,
   getCostosPromedio2026,
@@ -11,7 +12,7 @@ import {
   getRendimientoProveedores,
   getTiempoPromedioPorEtapa,
 } from "@/lib/queries";
-import { formatMXN, estatusInfo } from "@/lib/constants";
+import { formatMXN } from "@/lib/constants";
 import { CalendarClock, Truck, Building2, Wrench } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -95,10 +96,6 @@ export default async function AnaliticaPage() {
     getIndiceComplejidad(),
   ]);
 
-  const maxEtapaDias = Math.max(
-    1,
-    ...tiempoPorEtapa.map((e) => e.promedioDias).filter((d): d is number => d != null)
-  );
   const proveedoresFleteUSA = proveedores.filter((p) => p.rol === "Flete USA");
   const proveedoresAgenteAduanal = proveedores.filter((p) => p.rol === "Agente Aduanal");
 
@@ -129,42 +126,11 @@ export default async function AnaliticaPage() {
           </div>
         </Card>
 
-        <Card>
-          <CardHeader
-            title="Tiempo promedio por etapa"
-            subtitle="Dónde se detienen más los procesos — el promedio solo cuenta unidades que YA salieron de esa etapa; las que siguen ahí mismo en este momento se muestran aparte, como 'en curso', porque todavía no se sabe cuánto van a durar en total"
-          />
-          <div className="p-5">
-            {tiempoPorEtapa.length === 0 ? (
-              <EmptyState text="Todavía no hay suficientes cambios de estatus capturados en la app para calcular esto. Se va llenando conforme muevan unidades de una etapa a otra." />
-            ) : (
-              <ul className="space-y-3">
-                {tiempoPorEtapa.map((e) => {
-                  const info = estatusInfo(e.estatus);
-                  const pct = e.promedioDias != null ? Math.max(6, (e.promedioDias / maxEtapaDias) * 100) : 0;
-                  return (
-                    <li key={e.estatus}>
-                      <div className="flex items-center justify-between text-sm mb-1">
-                        <span className="text-ink-primary font-medium">{info.label}</span>
-                        <span className="text-ink-secondary">
-                          {e.promedioDias != null
-                            ? `${e.promedioDias} día${e.promedioDias === 1 ? "" : "s"} promedio · ${e.n} ya resuelta${e.n === 1 ? "" : "s"}`
-                            : "Sin promedio todavía"}
-                          {e.enCurso > 0 && (
-                            <span className="text-ink-muted"> · {e.enCurso} en curso ahora</span>
-                          )}
-                        </span>
-                      </div>
-                      <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
-                        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: info.solid }} />
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </Card>
+        <TiempoPorEtapaCard
+          data={tiempoPorEtapa}
+          subtitle="Dónde se detienen más los procesos — el promedio solo cuenta unidades que YA salieron de esa etapa; las que siguen ahí mismo en este momento se muestran aparte, como 'en curso', porque todavía no se sabe cuánto van a durar en total"
+          emptyText="Todavía no hay suficientes cambios de estatus capturados en la app para calcular esto. Se va llenando conforme muevan unidades de una etapa a otra."
+        />
 
         <Card>
           <CardHeader

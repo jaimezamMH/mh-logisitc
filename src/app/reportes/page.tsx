@@ -9,6 +9,7 @@ import EstatusTimeline from "@/components/EstatusTimeline";
 import EntregasHoyBanner from "@/components/EntregasHoyBanner";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import IndiceComplejidadCard from "@/components/IndiceComplejidadCard";
+import TiempoPorEtapaCard from "@/components/TiempoPorEtapaCard";
 import { getReporteDiario, getReporteRango } from "@/lib/queries";
 import { formatFecha, formatMXN, coincideBusqueda } from "@/lib/constants";
 import { calcularTimelineEstatus } from "@/lib/ciclo";
@@ -728,6 +729,14 @@ export default async function ReportesPage({
               diasEnAgenciaPromedio={activo.diasEnAgenciaPromedio}
               etapasPromedio={activo.etapasPromedio}
             />
+
+            {vista === "mensual" && (
+              <TiempoPorEtapaCard
+                data={activo.etapasPromedio}
+                subtitle="Dónde se detuvieron más los procesos — solo de los equipos que se entregaron este mes"
+                emptyText="Sin unidades entregadas este mes con historial de etapas para calcular esto."
+              />
+            )}
 
             <Card>
               <CardHeader title="Unidades entregadas en el periodo" />
