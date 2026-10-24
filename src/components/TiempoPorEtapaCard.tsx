@@ -26,21 +26,19 @@ export default function TiempoPorEtapaCard({
   subtitle: string;
   emptyText?: string;
 }) {
-  // Jaime pidió quitar "Pendiente" de esta vista — no le interesa por ahora.
-  const dataFiltrada = data.filter((e) => e.estatus !== "Pendiente");
-  const maxEtapaDias = Math.max(1, ...dataFiltrada.map((e) => e.promedioDias).filter((d): d is number => d != null));
-  const analisis = analizarTiempoPorEtapa(dataFiltrada);
+  const maxEtapaDias = Math.max(1, ...data.map((e) => e.promedioDias).filter((d): d is number => d != null));
+  const analisis = analizarTiempoPorEtapa(data);
 
   return (
     <Card>
       <CardHeader title="Tiempo promedio por etapa" subtitle={subtitle} />
       <div className="p-5 space-y-4">
-        {dataFiltrada.length === 0 ? (
+        {data.length === 0 ? (
           <EmptyState text={emptyText} />
         ) : (
           <>
             <ul className="space-y-3">
-              {dataFiltrada.map((e) => {
+              {data.map((e) => {
                 const info = estatusInfo(e.estatus);
                 const pct = e.promedioDias != null ? Math.max(6, (e.promedioDias / maxEtapaDias) * 100) : 0;
                 return (
