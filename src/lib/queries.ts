@@ -398,7 +398,7 @@ export async function getMapShipments() {
 // ---------------------------------------------------------------------------
 
 export async function getTiempoPromedioPorEtapa() {
-  const { calcularDuracionPorEtapa } = await import("@/lib/ciclo");
+  const { calcularDuracionPorEtapaUnica } = await import("@/lib/ciclo");
   const shipments = await prisma.shipment.findMany({
     select: { fechaEntrega: true, statusEvents: { select: { id: true, estatusNuevo: true, fecha: true } } },
   });
@@ -408,10 +408,12 @@ export async function getTiempoPromedioPorEtapa() {
   // días, porque ya se sabe cuánto duró completo. Las unidades que SIGUEN
   // ahí mismo en este momento (enCurso) no se pueden promediar todavía (no
   // se sabe cuánto van a durar en total), pero se cuentan aparte en
-  // "enCurso" para que no parezca que "faltan" unidades.
+  // "enCurso" para que no parezca que "faltan" unidades. Se usa la versión
+  // "única" para que una unidad con movimientos duplicados (error de
+  // captura) no aporte dos veces a la misma etapa.
   const porEtapa = new Map<string, { suma: number; n: number; enCurso: number }>();
   for (const s of shipments) {
-    const duraciones = calcularDuracionPorEtapa(s.statusEvents, s.fechaEntrega);
+    const duraciones = calcularDuracionPorEtapaUnica(s.statusEvents, s.fechaEntrega);
     for (const d of duraciones) {
       if (d.estatus === "Entregado") continue; // etapa final: no "dura", ya se cerró el ciclo
       const entry = porEtapa.get(d.estatus) ?? { suma: 0, n: 0, enCurso: 0 };
@@ -802,7 +804,7 @@ export async function getReporteDiario(fecha: Date = new Date()) {
 }
 
 export async function getReporteRango(from: Date, to: Date) {
-  const { calcularDuracionPorEtapa } = await import("@/lib/ciclo");
+  const { calcularDuracionPorEtapaUnica } = await import("@/lib/ciclo");
 
   const [eventos, ordenes, entregas] = await Promise.all([
     prisma.statusEvent.findMany({
@@ -869,7 +871,7 @@ export async function getReporteRango(from: Date, to: Date) {
   const diasEnAgenciaPorUnidad: number[] = [];
   const porEtapa = new Map<string, { suma: number; n: number }>();
   for (const s of entregas) {
-    const duraciones = calcularDuracionPorEtapa(s.statusEvents, s.fechaEntrega);
+    const duraciones = calcularDuracionPorEtapaUnica(s.statusEvents, s.fechaEntrega);
     const diasAgencia = duraciones
       .filter((d) => d.estatus === "Agencia")
       .reduce((a, d) => a + d.dias, 0);

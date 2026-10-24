@@ -85,3 +85,24 @@ export function calcularDuracionPorEtapa(
     return { eventoId: e.id, estatus: e.estatusNuevo, dias, enCurso };
   });
 }
+
+/**
+ * Igual que calcularDuracionPorEtapa(), pero para cuando se va a PROMEDIAR
+ * entre varias unidades (Reportes/Analítica) — si por un movimiento
+ * duplicado o un error de captura una unidad tiene la misma etapa repetida
+ * más de una vez, aquí solo cuenta la primera, para que una sola unidad
+ * nunca aporte más de un dato por etapa al promedio general.
+ */
+export function calcularDuracionPorEtapaUnica(
+  eventos: EventoConFecha[],
+  fechaEntrega: Date | null
+): DuracionEtapa[] {
+  const vistos = new Set<string>();
+  const unicas: DuracionEtapa[] = [];
+  for (const d of calcularDuracionPorEtapa(eventos, fechaEntrega)) {
+    if (vistos.has(d.estatus)) continue;
+    vistos.add(d.estatus);
+    unicas.push(d);
+  }
+  return unicas;
+}
