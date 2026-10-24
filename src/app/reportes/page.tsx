@@ -230,10 +230,12 @@ function AnalisisDeCiclo({
   cicloPromedioDias,
   diasEnAgenciaPromedio,
   etapasPromedio,
+  mostrarEtapas = true,
 }: {
   cicloPromedioDias: number | null;
   diasEnAgenciaPromedio: number | null;
   etapasPromedio: { estatus: string; promedioDias: number; n: number }[];
+  mostrarEtapas?: boolean;
 }) {
   return (
     <Card>
@@ -256,35 +258,36 @@ function AnalisisDeCiclo({
               )}
             </div>
 
-            {etapasPromedio.length > 0 ? (
-              <div className="space-y-3">
-                {etapasPromedio.map((e, i) => {
-                  const max = etapasPromedio[0].promedioDias;
-                  const pct = max > 0 ? Math.round((e.promedioDias / max) * 100) : 0;
-                  return (
-                    <div key={e.estatus}>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className={i === 0 ? "font-semibold text-ink-primary" : "text-ink-secondary"}>{e.estatus}</span>
-                        <span className="text-ink-muted">{e.promedioDias} días</span>
+            {mostrarEtapas &&
+              (etapasPromedio.length > 0 ? (
+                <div className="space-y-3">
+                  {etapasPromedio.map((e, i) => {
+                    const max = etapasPromedio[0].promedioDias;
+                    const pct = max > 0 ? Math.round((e.promedioDias / max) * 100) : 0;
+                    return (
+                      <div key={e.estatus}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className={i === 0 ? "font-semibold text-ink-primary" : "text-ink-secondary"}>{e.estatus}</span>
+                          <span className="text-ink-muted">{e.promedioDias} días</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-surface-muted overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${i === 0 ? "bg-brand-orange-500" : "bg-brand-blue-400"}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="h-2 rounded-full bg-surface-muted overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${i === 0 ? "bg-brand-orange-500" : "bg-brand-blue-400"}`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-                <p className="text-sm text-ink-secondary bg-surface-muted rounded-lg px-3 py-2.5">
-                  {analisisCiclo(etapasPromedio)}
+                    );
+                  })}
+                  <p className="text-sm text-ink-secondary bg-surface-muted rounded-lg px-3 py-2.5">
+                    {analisisCiclo(etapasPromedio)}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-ink-muted">
+                  Todavía no hay suficiente historial de movimiento por etapa en este periodo para identificar en qué proceso se atoran más las unidades — esto se va llenando conforme se muevan las unidades de etapa en etapa desde la app (cada clic en &quot;Mover a la siguiente etapa&quot; queda registrado con fecha real).
                 </p>
-              </div>
-            ) : (
-              <p className="text-sm text-ink-muted">
-                Todavía no hay suficiente historial de movimiento por etapa en este periodo para identificar en qué proceso se atoran más las unidades — esto se va llenando conforme se muevan las unidades de etapa en etapa desde la app (cada clic en &quot;Mover a la siguiente etapa&quot; queda registrado con fecha real).
-              </p>
-            )}
+              ))}
           </>
         )}
       </div>
@@ -728,6 +731,7 @@ export default async function ReportesPage({
               cicloPromedioDias={activo.cicloPromedioDias}
               diasEnAgenciaPromedio={activo.diasEnAgenciaPromedio}
               etapasPromedio={activo.etapasPromedio}
+              mostrarEtapas={vista !== "mensual"}
             />
 
             {vista === "mensual" && (
