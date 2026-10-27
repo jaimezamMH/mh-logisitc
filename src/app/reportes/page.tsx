@@ -765,6 +765,14 @@ export default async function ReportesPage({
             {vista === "mensual" && <CostoPromedio costos={activo.costoPromedioPorConcepto} />}
             {vista === "mensual" && <CostosPorCategoria filas={activo.costosPorCategoria} />}
             {vista === "mensual" && <TiempoPorCategoria filas={activo.tiempoPorCategoria} />}
+
+            <AnalisisDeCiclo
+              cicloPromedioDias={activo.cicloPromedioDias}
+              diasEnAgenciaPromedio={activo.diasEnAgenciaPromedio}
+              etapasPromedio={activo.etapasPromedio}
+              mostrarEtapas={vista !== "mensual"}
+            />
+
             {vista === "mensual" && (
               <IndiceComplejidadCard
                 resumen={activo.indiceComplejidad.resumen}
@@ -776,13 +784,6 @@ export default async function ReportesPage({
             <PagosPorProveedor
               proveedoresFleteUSA={activo.proveedoresFleteUSA}
               proveedoresAgenteAduanal={activo.proveedoresAgenteAduanal}
-            />
-
-            <AnalisisDeCiclo
-              cicloPromedioDias={activo.cicloPromedioDias}
-              diasEnAgenciaPromedio={activo.diasEnAgenciaPromedio}
-              etapasPromedio={activo.etapasPromedio}
-              mostrarEtapas={vista !== "mensual"}
             />
 
             {vista === "mensual" && (
