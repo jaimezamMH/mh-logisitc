@@ -641,6 +641,59 @@ export async function getCostosPromedioPorCategoria() {
   return costosPromedioPorCategoriaDe(shipments);
 }
 
+// Tiempo promedio de ciclo (cuánto tardó en cruzar/entregarse), agrupado
+// por categoría de equipo — mismo patrón que costosPromedioPorCategoriaDe()
+// pero con días en vez de dinero. El tiempo en Agencia se resta igual que
+// en el "Ciclo logístico promedio" general (no es responsabilidad de
+// Logística), y se reporta aparte.
+type ShipmentConCiclo = {
+  categoria: string | null;
+  tiempoCicloDias: number | null;
+  fechaInicio: Date | null;
+  fechaEntrega: Date | null;
+  statusEvents: { id: string; estatusNuevo: string; fecha: Date }[];
+};
+
+async function tiempoCicloPromedioPorCategoriaDe(shipments: ShipmentConCiclo[]) {
+  const { calcularDuracionPorEtapaUnica } = await import("@/lib/ciclo");
+
+  type Grupo = { categoria: string; n: number; ciclo: number[]; agencia: number[] };
+  const map = new Map<string, Grupo>();
+
+  for (const s of shipments) {
+    if (!s.categoria) continue;
+    const duraciones = calcularDuracionPorEtapaUnica(s.statusEvents, s.fechaEntrega);
+    const diasAgencia = duraciones.filter((d) => d.estatus === "Agencia").reduce((a, d) => a + d.dias, 0);
+    const totalDias = s.tiempoCicloDias ?? diasEnProceso(s.fechaInicio, s.fechaEntrega);
+
+    const g = map.get(s.categoria) ?? { categoria: s.categoria, n: 0, ciclo: [], agencia: [] };
+    g.n += 1;
+    if (totalDias != null) g.ciclo.push(Math.max(0, totalDias - diasAgencia));
+    if (diasAgencia > 0) g.agencia.push(diasAgencia);
+    map.set(s.categoria, g);
+  }
+
+  const avg = (arr: number[]) => (arr.length ? Math.round((arr.reduce((a, b) => a + b, 0) / arr.length) * 10) / 10 : null);
+
+  const filas = Array.from(map.values()).map((g) => ({
+    categoria: g.categoria,
+    n: g.n,
+    cicloPromedioDias: avg(g.ciclo),
+    diasEnAgenciaPromedio: avg(g.agencia),
+  }));
+
+  filas.sort((a, b) => b.n - a.n);
+  return filas;
+}
+
+export async function getTiempoCicloPromedioPorCategoria() {
+  const shipments = await prisma.shipment.findMany({
+    where: { categoria: { not: null }, estatus: "Entregado" },
+    select: { categoria: true, tiempoCicloDias: true, fechaInicio: true, fechaEntrega: true, statusEvents: { select: { id: true, estatusNuevo: true, fecha: true } } },
+  });
+  return tiempoCicloPromedioPorCategoriaDe(shipments);
+}
+
 // Índice de complejidad de carga (1 a 3) — ver indiceComplejidad() en
 // constants.ts para las reglas. Agrupa por categoría + complejidad (una
 // misma categoría puede caer en más de un nivel si no es de cama baja,
@@ -904,6 +957,7 @@ export async function getReporteRango(from: Date, to: Date) {
   // dirección.
   const costosPorCategoria = costosPromedioPorCategoriaDe(entregas);
   const indiceComplejidadResumen = indiceComplejidadDe(entregas);
+  const tiempoPorCategoria = await tiempoCicloPromedioPorCategoriaDe(entregas);
 
   return {
     from,
@@ -923,5 +977,6 @@ export async function getReporteRango(from: Date, to: Date) {
     etapasPromedio,
     costosPorCategoria,
     indiceComplejidad: indiceComplejidadResumen,
+    tiempoPorCategoria,
   };
 }

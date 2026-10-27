@@ -213,6 +213,56 @@ function CostosPorCategoria({
   );
 }
 
+function TiempoPorCategoria({
+  filas,
+}: {
+  filas: {
+    categoria: string;
+    n: number;
+    cicloPromedioDias: number | null;
+    diasEnAgenciaPromedio: number | null;
+  }[];
+}) {
+  return (
+    <Card>
+      <CardHeader
+        title="Tiempo de ciclo promedio por categoría de equipo"
+        subtitle="Cuánto tardaron en cruzar (compra → listo para entregar, sin contar Agencia), de las unidades entregadas este mes"
+      />
+      {filas.length === 0 ? (
+        <EmptyState text="Sin unidades entregadas con categoría este mes." />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-ink-muted border-b border-border">
+                <th className="px-5 py-2.5 font-medium">Categoría</th>
+                <th className="px-5 py-2.5 font-medium text-right">Unidades</th>
+                <th className="px-5 py-2.5 font-medium text-right">Ciclo promedio</th>
+                <th className="px-5 py-2.5 font-medium text-right">Días en Agencia prom.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filas.map((c) => (
+                <tr key={c.categoria} className="border-b border-border last:border-0 hover:bg-surface-muted">
+                  <td className="px-5 py-2.5 font-medium text-ink-primary">{c.categoria}</td>
+                  <td className="px-5 py-2.5 text-right">{c.n}</td>
+                  <td className="px-5 py-2.5 text-right font-semibold text-ink-primary">
+                    {c.cicloPromedioDias != null ? `${c.cicloPromedioDias} días` : "—"}
+                  </td>
+                  <td className="px-5 py-2.5 text-right">
+                    {c.diasEnAgenciaPromedio != null ? `${c.diasEnAgenciaPromedio} días` : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function analisisCiclo(etapasPromedio: { estatus: string; promedioDias: number; n: number }[]) {
   // "Agencia" se queda aparte del ciclo logístico (ver arriba) — se excluye
   // de este análisis porque ya tiene su propio dato (Promedio en Agencia).
@@ -714,6 +764,7 @@ export default async function ReportesPage({
 
             {vista === "mensual" && <CostoPromedio costos={activo.costoPromedioPorConcepto} />}
             {vista === "mensual" && <CostosPorCategoria filas={activo.costosPorCategoria} />}
+            {vista === "mensual" && <TiempoPorCategoria filas={activo.tiempoPorCategoria} />}
             {vista === "mensual" && (
               <IndiceComplejidadCard
                 resumen={activo.indiceComplejidad.resumen}
