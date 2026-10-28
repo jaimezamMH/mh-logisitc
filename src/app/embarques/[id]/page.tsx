@@ -580,24 +580,30 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                     ) : (
                       <label className="flex items-center justify-between gap-2 text-sm rounded-lg border border-border px-3 py-2">
                         <span className="flex items-center gap-2 text-ink-secondary shrink-0">
-                          <input type="checkbox" name="incluirFleteUSA" defaultChecked />
+                          <input type="checkbox" name="incluirFleteUSA" />
                           Flete USA
                         </span>
                         <SyncedMoneyInput campo="costoFleteUSA" className="w-28 rounded-md border border-border px-2 py-1 text-right text-sm" />
                       </label>
                     )}
                     {[
-                      { check: "incluirImportacion", campo: "costoImportacion", label: "Importación / Aduana" },
-                      { check: "incluirManiobras", campo: "costoManiobras", label: "Maniobra/Reparación" },
-                      { check: "incluirFleteMx", campo: "costoFleteMx", label: "Flete México" },
-                      { check: "incluirPermiso", campo: "costoPermiso", label: "Permiso" },
-                      { check: "incluirSeguro", campo: "costoSeguro", label: "Seguro" },
-                      { check: "incluirPlacas", campo: "costoPlacas", label: "Placas" },
-                      { check: "incluirRepuveTitulo", campo: "costoRepuveTitulo", label: "Repuve/Título" },
-                    ].map((c) => (
+                      { check: "incluirImportacion", campo: "costoImportacion", label: "Importación / Aduana", siempre: true },
+                      { check: "incluirManiobras", campo: "costoManiobras", label: "Maniobra/Reparación", siempre: false },
+                      { check: "incluirFleteMx", campo: "costoFleteMx", label: "Flete México", siempre: true },
+                      { check: "incluirPermiso", campo: "costoPermiso", label: "Permiso", siempre: false },
+                      { check: "incluirSeguro", campo: "costoSeguro", label: "Seguro", siempre: false },
+                      { check: "incluirPlacas", campo: "costoPlacas", label: "Placas", siempre: false },
+                      { check: "incluirRepuveTitulo", campo: "costoRepuveTitulo", label: "Repuve/Título", siempre: true },
+                    ]
+                      // Permiso/Seguro/Placas/Maniobra ya quedaron dentro de los
+                      // conceptos fijos de Flete USA (arriba) — aquí solo se
+                      // muestran si una unidad vieja todavía trae algo pendiente
+                      // de pagar en esos campos sueltos, para no perderlo.
+                      .filter((c) => c.siempre || (shipment[c.campo as keyof typeof shipment] as number) > 0)
+                      .map((c) => (
                       <label key={c.check} className="flex items-center justify-between gap-2 text-sm rounded-lg border border-border px-3 py-2">
                         <span className="flex items-center gap-2 text-ink-secondary shrink-0">
-                          <input type="checkbox" name={c.check} defaultChecked />
+                          <input type="checkbox" name={c.check} />
                           {c.label}
                           {c.campo === "costoImportacion" && shipment.costoBondCanada > 0 && (
                             <span className="text-xs text-ink-muted">(incluye Bond/Canadá)</span>
