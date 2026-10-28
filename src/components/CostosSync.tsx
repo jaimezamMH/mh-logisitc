@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { MoneyInput } from "@/components/ui";
 import { formatMXN } from "@/lib/constants";
 
@@ -37,6 +37,17 @@ export function CostosSyncProvider({
   inicial: Costos;
 }) {
   const [valores, setValores] = useState<Costos>(inicial);
+  const inicialKey = JSON.stringify(inicial);
+  // Si otra acción (ej. guardar los gastos de Flete USA) actualiza el
+  // embarque y revalida esta página, "inicial" llega con valores frescos —
+  // pero useState solo lee su argumento en el primer montaje, así que sin
+  // esto el total se quedaría pegado con el número de cuando se abrió la
+  // página, aunque ya no sea el real (se vio este bug: Flete USA mostraba
+  // el doble después de guardar).
+  useEffect(() => {
+    setValores(inicial);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inicialKey]);
   const setValor = (campo: keyof Costos, v: string) => setValores((prev) => ({ ...prev, [campo]: v }));
   return <CostosContext.Provider value={{ valores, inicial, setValor }}>{children}</CostosContext.Provider>;
 }
