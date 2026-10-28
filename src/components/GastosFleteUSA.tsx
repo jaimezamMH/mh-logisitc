@@ -17,9 +17,7 @@ export interface GastoFleteUSAItem {
 const CONCEPTOS = [
   "Viáticos efectivo",
   "Vuelos",
-  "Permisos",
-  "Seguro",
-  "Placas",
+  "Permisos, Seguro y Placas",
   "Gastos generales",
   "Reparación/Refacción",
   "Pago operador",
