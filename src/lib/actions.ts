@@ -565,7 +565,12 @@ async function recalcularCostoFleteUSA(shipmentId: string) {
 
 export async function agregarGastoFleteUSA(shipmentId: string, formData: FormData) {
   await requireFullAccess();
-  const concepto = str(formData, "concepto") ?? "Gasto";
+  const tipo = str(formData, "tipo") ?? "Gasto";
+  const detalle = str(formData, "detalle");
+  const concepto =
+    tipo === "Pago operador" && detalle ? `Pago operador: ${detalle}`
+    : tipo === "Otro" && detalle ? detalle
+    : tipo;
   const monto = num(formData, "monto");
   const fecha = dateOrNull(formData, "fecha") ?? new Date();
 
