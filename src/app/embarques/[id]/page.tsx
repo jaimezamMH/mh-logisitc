@@ -5,7 +5,8 @@ import { Card, CardHeader, StatusBadge, EmptyState, SerieTag, ClockBadge, MoneyI
 import UserSelect from "@/components/UserSelect";
 import SelectOrNew from "@/components/SelectOrNew";
 import BancoSelect from "@/components/BancoSelect";
-import { CostosSyncProvider, SyncedMoneyInput, SyncedHiddenInput, SyncedTotal, ViaticosFleteUSA, type CostoCampo } from "@/components/CostosSync";
+import { CostosSyncProvider, SyncedMoneyInput, SyncedHiddenInput, SyncedTotal, type CostoCampo } from "@/components/CostosSync";
+import GastosFleteUSA from "@/components/GastosFleteUSA";
 import ConfirmZeroCostButton from "@/components/ConfirmZeroCostButton";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import FotoEquipo from "@/components/FotoEquipo";
@@ -54,6 +55,13 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
     shipment.costoRepuveTitulo;
 
   const costoPorMilla = shipment.millas > 0 ? totalCostos / shipment.millas : null;
+
+  // Si Flete USA ya está desglosado en gastos individuales, el monto de una
+  // orden nueva es la suma de los que todavía no se han pagado — ya no se
+  // escribe un solo monto suelto aquí (ver GastosFleteUSA).
+  const gastosFleteUSANoPagados = shipment.gastosFleteUSA.filter((g) => !g.paymentOrderId);
+  const fleteUSAItemizado = shipment.gastosFleteUSA.length > 0;
+  const sumaFleteUSANoPagado = gastosFleteUSANoPagados.reduce((a, g) => a + g.monto, 0);
 
   const esServicio = shipment.tipoVenta === "Servicio Logístico";
   const totalPrecioServicio =
@@ -330,8 +338,18 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                   subtitle={esServicio ? "Costo real vs. precio al cliente" : "Flete USA, importación, maniobras, flete Mx, permiso, seguro y placas"}
                 />
                 <div className="p-5 space-y-2">
+                  {esServicio ? (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-ink-secondary">Flete USA</span>
+                      <span className="text-ink-primary font-medium">
+                        {formatMXN(shipment.costoFleteUSA)}
+                        {shipment.precioFleteUSA > 0 && <span className="text-ink-muted"> · cliente {formatMXN(shipment.precioFleteUSA)}</span>}
+                      </span>
+                    </div>
+                  ) : (
+                    <GastosFleteUSA shipmentId={shipment.id} gastos={shipment.gastosFleteUSA} costoFleteUSA={shipment.costoFleteUSA} soloLectura />
+                  )}
                   {[
-                    { label: "Flete USA", costo: shipment.costoFleteUSA, precio: shipment.precioFleteUSA },
                     { label: "Importación", costo: shipment.costoImportacion, precio: shipment.precioImportacion },
                     ...(shipment.costoBondCanada > 0 ? [{ label: "Bond/Canadá", costo: shipment.costoBondCanada, precio: 0 }] : []),
                     ...(esServicio ? [] : [{ label: "Maniobra/Reparación", costo: shipment.costoManiobras, precio: 0 }]),
@@ -421,9 +439,19 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                 subtitle={
                   esServicio
                     ? "Costo real (lo que pagas) vs. precio al cliente (lo que cobras) — la diferencia es tu utilidad"
-                    : "Alimenta aquí flete USA, importación, maniobras, flete Mx, permiso, seguro, placas y repuve/título"
+                    : "Flete USA se desglosa arriba por gasto. Importación, maniobras, flete Mx, permiso, seguro, placas y repuve/título van aquí abajo"
                 }
               />
+              {!esServicio && (
+                <div className="px-5 pt-5 pb-4 border-b border-border">
+                  <GastosFleteUSA
+                    shipmentId={shipment.id}
+                    gastos={shipment.gastosFleteUSA}
+                    costoFleteUSA={shipment.costoFleteUSA}
+                    soloLectura={false}
+                  />
+                </div>
+              )}
               <form action={updateShipmentCosts.bind(null, shipment.id)} className="p-5 space-y-4">
                 {esServicio ? (
                   <div className="space-y-2">
@@ -463,8 +491,8 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
-                      <ViaticosFleteUSA />
+                    <SyncedHiddenInput campo="costoFleteUSA" />
+                    <div className="col-span-2 grid grid-cols-3 gap-3 items-end">
                       <label className="flex flex-col gap-1 text-sm">
                         <span className="text-ink-secondary">Permiso</span>
                         <SyncedMoneyInput campo="costoPermiso" />
@@ -478,10 +506,6 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                         <SyncedMoneyInput campo="costoPlacas" />
                       </label>
                     </div>
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-ink-secondary">Flete USA</span>
-                      <SyncedMoneyInput campo="costoFleteUSA" />
-                    </label>
                     <div className="flex flex-col gap-2">
                       <label className="flex flex-col gap-1 text-sm">
                         <span className="text-ink-secondary">Importación</span>
@@ -554,11 +578,18 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                           {c.campo === "costoImportacion" && shipment.costoBondCanada > 0 && (
                             <span className="text-xs text-ink-muted">(incluye Bond/Canadá)</span>
                           )}
+                          {c.campo === "costoFleteUSA" && fleteUSAItemizado && (
+                            <span className="text-xs text-ink-muted">(suma de gastos sin pagar)</span>
+                          )}
                         </span>
-                        <SyncedMoneyInput
-                          campo={c.campo as CostoCampo}
-                          className="w-28 rounded-md border border-border px-2 py-1 text-right text-sm"
-                        />
+                        {c.campo === "costoFleteUSA" && fleteUSAItemizado ? (
+                          <span className="w-28 text-right text-sm font-medium text-ink-primary">{formatMXN(sumaFleteUSANoPagado)}</span>
+                        ) : (
+                          <SyncedMoneyInput
+                            campo={c.campo as CostoCampo}
+                            className="w-28 rounded-md border border-border px-2 py-1 text-right text-sm"
+                          />
+                        )}
                       </label>
                     ))}
                   </div>

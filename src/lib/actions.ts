@@ -417,14 +417,13 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
   if (!s) throw new Error("Embarque no encontrado");
 
   // Flete USA no es un solo monto — son varios gastos que se van sumando
-  // (viáticos, vuelos, comisión, etc., ver GastoFleteUSA). Si el equipo ya
-  // tiene gastos capturados así, el monto de la orden es la suma de los que
-  // se marquen aquí uno por uno; si todavía no se ha capturado ningún gasto
-  // (equipos viejos), se comporta como antes: un solo monto editable.
+  // (viáticos, vuelos, gastos generales, pago operador, ver GastoFleteUSA).
+  // Si el equipo ya tiene gastos capturados así, el monto de la orden es la
+  // suma de TODOS los que sigan sin pagar (paymentOrderId null, ya filtrado
+  // arriba); si todavía no se ha capturado ningún gasto (equipos viejos), se
+  // comporta como antes: un solo monto editable.
   const usaGastosFleteUSA = s.gastosFleteUSA.length > 0;
-  const gastosMarcados = usaGastosFleteUSA
-    ? s.gastosFleteUSA.filter((g) => formData.get(`gasto_${g.id}`) === "on")
-    : [];
+  const gastosMarcados = usaGastosFleteUSA ? s.gastosFleteUSA : [];
 
   let montoFleteUSA: number;
   if (usaGastosFleteUSA) {
@@ -566,9 +565,29 @@ async function recalcularCostoFleteUSA(shipmentId: string) {
 
 export async function agregarGastoFleteUSA(shipmentId: string, formData: FormData) {
   await requireFullAccess();
-  const concepto = str(formData, "concepto") ?? "Gasto";
+  const tipo = str(formData, "tipo") ?? "Gasto";
+  const detalle = str(formData, "detalle");
+  const concepto =
+    tipo === "Pago operador" && detalle ? `Pago operador: ${detalle}`
+    : tipo === "Otro" && detalle ? detalle
+    : tipo;
   const monto = num(formData, "monto");
   const fecha = dateOrNull(formData, "fecha") ?? new Date();
+
+  // Si esta unidad ya traía un monto de Flete USA capturado de un solo
+  // golpe (como era antes de desglosarlo) y todavía no tiene NINGÚN gasto
+  // itemizado, el primer gasto que se agregue aquí "reiniciaría" el total
+  // (recalcularCostoFleteUSA suma solo los gastos). Para no perder ese
+  // monto previo, se guarda como un gasto más antes de agregar el nuevo.
+  const yaTieneGastos = (await prisma.gastoFleteUSA.count({ where: { shipmentId } })) > 0;
+  if (!yaTieneGastos) {
+    const s = await prisma.shipment.findUnique({ where: { id: shipmentId }, select: { costoFleteUSA: true } });
+    if (s && s.costoFleteUSA > 0) {
+      await prisma.gastoFleteUSA.create({
+        data: { shipmentId, concepto: "Monto previo (antes del desglose)", monto: s.costoFleteUSA, fecha: new Date() },
+      });
+    }
+  }
 
   await prisma.gastoFleteUSA.create({
     data: { shipmentId, concepto, monto, fecha },
