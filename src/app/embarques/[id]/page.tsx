@@ -27,7 +27,7 @@ import {
   resolveComment,
   deleteShipment,
 } from "@/lib/actions";
-import { ADUANAS, ESTATUS_FLOW, VENDEDORES, estatusInfo, formatFecha, formatMXN } from "@/lib/constants";
+import { ADUANAS, ESTATUS_FLOW, VENDEDORES, estatusInfo, formatFecha, formatMXN, FLETE_USA_SLOTS, gastoFleteUSAPerteneceASlot } from "@/lib/constants";
 import { calcularDuracionPorEtapa, calcularTimelineEstatus } from "@/lib/ciclo";
 import { Trash2, Printer } from "lucide-react";
 
@@ -62,6 +62,13 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
   const gastosFleteUSANoPagados = shipment.gastosFleteUSA.filter((g) => !g.paymentOrderId);
   const fleteUSAItemizado = shipment.gastosFleteUSA.length > 0;
   const sumaFleteUSANoPagado = gastosFleteUSANoPagados.reduce((a, g) => a + g.monto, 0);
+  const montosPorSlotFleteUSA = FLETE_USA_SLOTS.map((slot) => ({
+    slot,
+    monto: gastosFleteUSANoPagados.filter((g) => gastoFleteUSAPerteneceASlot(g.concepto, slot.key)).reduce((a, g) => a + g.monto, 0),
+  }));
+  const montoOtrosFleteUSA = gastosFleteUSANoPagados
+    .filter((g) => !FLETE_USA_SLOTS.some((slot) => gastoFleteUSAPerteneceASlot(g.concepto, slot.key)))
+    .reduce((a, g) => a + g.monto, 0);
 
   const esServicio = shipment.tipoVenta === "Servicio Logístico";
   const totalPrecioServicio =
@@ -547,8 +554,39 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                 <form action={generarOrdenDePago.bind(null, shipment.id)} className="space-y-3">
                   <SyncedHiddenInput campo="costoBondCanada" />
                   <div className="space-y-1.5">
+                    {fleteUSAItemizado ? (
+                      <>
+                        {montosPorSlotFleteUSA.map(({ slot, monto }) =>
+                          monto > 0 ? (
+                            <label key={slot.key} className="flex items-center justify-between gap-2 text-sm rounded-lg border border-border px-3 py-2">
+                              <span className="flex items-center gap-2 text-ink-secondary shrink-0">
+                                <input type="checkbox" name={`incluirFleteUSA_${slot.key}`} />
+                                {slot.label}
+                              </span>
+                              <span className="w-28 text-right text-sm font-medium text-ink-primary">{formatMXN(monto)}</span>
+                            </label>
+                          ) : null
+                        )}
+                        {montoOtrosFleteUSA > 0 && (
+                          <label className="flex items-center justify-between gap-2 text-sm rounded-lg border border-border px-3 py-2">
+                            <span className="flex items-center gap-2 text-ink-secondary shrink-0">
+                              <input type="checkbox" name="incluirFleteUSA_otros" />
+                              Otros gastos de Flete USA
+                            </span>
+                            <span className="w-28 text-right text-sm font-medium text-ink-primary">{formatMXN(montoOtrosFleteUSA)}</span>
+                          </label>
+                        )}
+                      </>
+                    ) : (
+                      <label className="flex items-center justify-between gap-2 text-sm rounded-lg border border-border px-3 py-2">
+                        <span className="flex items-center gap-2 text-ink-secondary shrink-0">
+                          <input type="checkbox" name="incluirFleteUSA" defaultChecked />
+                          Flete USA
+                        </span>
+                        <SyncedMoneyInput campo="costoFleteUSA" className="w-28 rounded-md border border-border px-2 py-1 text-right text-sm" />
+                      </label>
+                    )}
                     {[
-                      { check: "incluirFleteUSA", campo: "costoFleteUSA", label: "Flete USA" },
                       { check: "incluirImportacion", campo: "costoImportacion", label: "Importación / Aduana" },
                       { check: "incluirManiobras", campo: "costoManiobras", label: "Maniobra/Reparación" },
                       { check: "incluirFleteMx", campo: "costoFleteMx", label: "Flete México" },
@@ -564,18 +602,11 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                           {c.campo === "costoImportacion" && shipment.costoBondCanada > 0 && (
                             <span className="text-xs text-ink-muted">(incluye Bond/Canadá)</span>
                           )}
-                          {c.campo === "costoFleteUSA" && fleteUSAItemizado && (
-                            <span className="text-xs text-ink-muted">(suma de gastos sin pagar)</span>
-                          )}
                         </span>
-                        {c.campo === "costoFleteUSA" && fleteUSAItemizado ? (
-                          <span className="w-28 text-right text-sm font-medium text-ink-primary">{formatMXN(sumaFleteUSANoPagado)}</span>
-                        ) : (
-                          <SyncedMoneyInput
-                            campo={c.campo as CostoCampo}
-                            className="w-28 rounded-md border border-border px-2 py-1 text-right text-sm"
-                          />
-                        )}
+                        <SyncedMoneyInput
+                          campo={c.campo as CostoCampo}
+                          className="w-28 rounded-md border border-border px-2 py-1 text-right text-sm"
+                        />
                       </label>
                     ))}
                   </div>

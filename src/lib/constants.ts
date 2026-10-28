@@ -249,6 +249,29 @@ export function indiceComplejidad(categoria: string | null | undefined, millas: 
   return millas > 1500 ? 2 : 1;
 }
 
+// Conceptos fijos en los que se desglosa Flete USA (viáticos, vuelos,
+// seguro/permiso/placas, gastos generales, reparación, pago operador) — se
+// capturan juntos en un solo formulario y cada uno se puede incluir o no,
+// por separado, al generar una orden de pago.
+export const FLETE_USA_SLOTS = [
+  { key: "viaticos", label: "Viáticos efectivo" },
+  { key: "vuelos", label: "Vuelos" },
+  { key: "seguro", label: "Seguro/Permiso/Placas" },
+  { key: "generales", label: "Gastos generales" },
+  { key: "reparacion", label: "Reparación/Refacción" },
+  { key: "operador", label: "Pago operador" },
+] as const;
+export type FleteUSASlotKey = (typeof FLETE_USA_SLOTS)[number]["key"];
+
+// "Pago operador" guarda el nombre pegado al concepto ("Pago operador: Juan"),
+// así que para saber a qué concepto fijo pertenece un gasto ya guardado hay
+// que comparar por prefijo en ese caso, no por igualdad exacta.
+export function gastoFleteUSAPerteneceASlot(concepto: string, slotKey: FleteUSASlotKey): boolean {
+  if (slotKey === "operador") return concepto === "Pago operador" || concepto.startsWith("Pago operador:");
+  const slot = FLETE_USA_SLOTS.find((s) => s.key === slotKey);
+  return slot ? concepto === slot.label : false;
+}
+
 export const MESES = [
   "Enero",
   "Febrero",

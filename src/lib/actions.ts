@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { esSoloLectura } from "@/lib/auth-server";
 import { enviarOrdenAlERP } from "@/lib/erp";
+import { FLETE_USA_SLOTS, gastoFleteUSAPerteneceASlot } from "@/lib/constants";
 
 // Barrera real de seguridad para el acceso de "solo lectura" (Dirección): el
 // botón ya se oculta en la UI, pero esto bloquea igual si alguien manda la
@@ -342,10 +343,10 @@ export async function updateShipmentCosts(shipmentId: string, formData: FormData
   await requireFullAccess();
   const tienePrecios = formData.has("precioFleteUSA");
   // Si la unidad ya tiene Flete USA desglosado en gastos individuales
-  // (viáticos, vuelos, comisión...), ese costo se administra SOLO desde ahí
-  // (agregarGastoFleteUSA/eliminarGastoFleteUSA) — aquí se ignora para no
-  // pisarlo con un monto suelto desde otra pantalla (ej. la tabla editable
-  // de /costos).
+  // (viáticos, vuelos, seguro/permiso/placas...), ese costo se administra
+  // SOLO desde ahí (guardarGastosFleteUSA/eliminarGastoFleteUSA) — aquí se
+  // ignora para no pisarlo con un monto suelto desde otra pantalla (ej. la
+  // tabla editable de /costos).
   const tieneGastosFleteUSA = (await prisma.gastoFleteUSA.count({ where: { shipmentId } })) > 0;
 
   await prisma.shipment.update({
@@ -417,13 +418,29 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
   if (!s) throw new Error("Embarque no encontrado");
 
   // Flete USA no es un solo monto — son varios gastos que se van sumando
-  // (viáticos, vuelos, gastos generales, pago operador, ver GastoFleteUSA).
-  // Si el equipo ya tiene gastos capturados así, el monto de la orden es la
-  // suma de TODOS los que sigan sin pagar (paymentOrderId null, ya filtrado
-  // arriba); si todavía no se ha capturado ningún gasto (equipos viejos), se
-  // comporta como antes: un solo monto editable.
-  const usaGastosFleteUSA = s.gastosFleteUSA.length > 0;
-  const gastosMarcados = usaGastosFleteUSA ? s.gastosFleteUSA : [];
+  // (viáticos, vuelos, seguro/permiso/placas, gastos generales, reparación,
+  // pago operador, ver GastoFleteUSA / FLETE_USA_SLOTS). Si el equipo ya
+  // tiene gastos capturados así, cada concepto se puede incluir o no por
+  // separado en esta orden (una casilla por concepto); lo que no encaje en
+  // ninguno de esos 6 conceptos (ej. un monto previo sin desglosar) cae en
+  // "Otros gastos de Flete USA". Si todavía no se ha capturado ningún gasto
+  // (equipos viejos), se comporta como antes: un solo monto editable.
+  const sinPagarFleteUSA = s.gastosFleteUSA;
+  const usaGastosFleteUSA = sinPagarFleteUSA.length > 0;
+  const otrosSinSlot = sinPagarFleteUSA.filter(
+    (g) => !FLETE_USA_SLOTS.some((slot) => gastoFleteUSAPerteneceASlot(g.concepto, slot.key))
+  );
+
+  const gastosMarcados = usaGastosFleteUSA
+    ? [
+        ...sinPagarFleteUSA.filter((g) =>
+          FLETE_USA_SLOTS.some(
+            (slot) => gastoFleteUSAPerteneceASlot(g.concepto, slot.key) && formData.get(`incluirFleteUSA_${slot.key}`) === "on"
+          )
+        ),
+        ...(formData.get("incluirFleteUSA_otros") === "on" ? otrosSinSlot : []),
+      ]
+    : [];
 
   let montoFleteUSA: number;
   if (usaGastosFleteUSA) {
@@ -464,7 +481,7 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
     data: costosActualizados,
   });
 
-  const incluirFleteUSA = formData.get("incluirFleteUSA") === "on";
+  const incluirFleteUSA = usaGastosFleteUSA ? gastosMarcados.length > 0 : formData.get("incluirFleteUSA") === "on";
   const montos: Record<string, number> = {
     costoFleteUSA: incluirFleteUSA ? montoFleteUSA : 0,
     costoImportacion: 0,
@@ -563,22 +580,20 @@ async function recalcularCostoFleteUSA(shipmentId: string) {
   });
 }
 
-export async function agregarGastoFleteUSA(shipmentId: string, formData: FormData) {
+// Guarda de un solo golpe los 6 conceptos fijos de Flete USA (ver
+// FLETE_USA_SLOTS): un formulario con una casilla de monto por concepto,
+// en vez de ir agregando uno por uno. Reemplaza lo que esta unidad tuviera
+// SIN PAGAR en cada concepto (lo ya incluido en una orden de pago se deja
+// como historial, no se toca) y, si el monto de un concepto queda en 0, ese
+// concepto simplemente no se guarda.
+export async function guardarGastosFleteUSA(shipmentId: string, formData: FormData) {
   await requireFullAccess();
-  const tipo = str(formData, "tipo") ?? "Gasto";
-  const detalle = str(formData, "detalle");
-  const concepto =
-    tipo === "Pago operador" && detalle ? `Pago operador: ${detalle}`
-    : tipo === "Otro" && detalle ? detalle
-    : tipo;
-  const monto = num(formData, "monto");
-  const fecha = dateOrNull(formData, "fecha") ?? new Date();
 
   // Si esta unidad ya traía un monto de Flete USA capturado de un solo
   // golpe (como era antes de desglosarlo) y todavía no tiene NINGÚN gasto
-  // itemizado, el primer gasto que se agregue aquí "reiniciaría" el total
+  // itemizado, el primer guardado aquí "reiniciaría" el total
   // (recalcularCostoFleteUSA suma solo los gastos). Para no perder ese
-  // monto previo, se guarda como un gasto más antes de agregar el nuevo.
+  // monto previo, se guarda como un gasto más antes de aplicar lo nuevo.
   const yaTieneGastos = (await prisma.gastoFleteUSA.count({ where: { shipmentId } })) > 0;
   if (!yaTieneGastos) {
     const s = await prisma.shipment.findUnique({ where: { id: shipmentId }, select: { costoFleteUSA: true } });
@@ -589,9 +604,22 @@ export async function agregarGastoFleteUSA(shipmentId: string, formData: FormDat
     }
   }
 
-  await prisma.gastoFleteUSA.create({
-    data: { shipmentId, concepto, monto, fecha },
-  });
+  const sinPagar = await prisma.gastoFleteUSA.findMany({ where: { shipmentId, paymentOrderId: null } });
+  const nombreOperador = str(formData, "nombreOperador");
+  const fecha = new Date();
+
+  for (const slot of FLETE_USA_SLOTS) {
+    const monto = num(formData, `monto_${slot.key}`);
+    const idsDeEsteSlot = sinPagar.filter((g) => gastoFleteUSAPerteneceASlot(g.concepto, slot.key)).map((g) => g.id);
+    if (idsDeEsteSlot.length > 0) {
+      await prisma.gastoFleteUSA.deleteMany({ where: { id: { in: idsDeEsteSlot } } });
+    }
+    if (monto > 0) {
+      const concepto = slot.key === "operador" && nombreOperador ? `Pago operador: ${nombreOperador}` : slot.label;
+      await prisma.gastoFleteUSA.create({ data: { shipmentId, concepto, monto, fecha } });
+    }
+  }
+
   await recalcularCostoFleteUSA(shipmentId);
 
   revalidatePath(`/embarques/${shipmentId}`);
