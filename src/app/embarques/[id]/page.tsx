@@ -335,7 +335,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
               <Card>
                 <CardHeader
                   title="Costos del embarque"
-                  subtitle={esServicio ? "Costo real vs. precio al cliente" : "Flete USA, importación, maniobras, flete Mx, permiso, seguro y placas"}
+                  subtitle={esServicio ? "Costo real vs. precio al cliente" : "Flete USA (desglosado), importación, flete Mx y repuve/título"}
                 />
                 <div className="p-5 space-y-2">
                   {esServicio ? (
@@ -439,7 +439,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                 subtitle={
                   esServicio
                     ? "Costo real (lo que pagas) vs. precio al cliente (lo que cobras) — la diferencia es tu utilidad"
-                    : "Flete USA se desglosa arriba por gasto. Importación, maniobras, flete Mx, permiso, seguro, placas y repuve/título van aquí abajo"
+                    : "Flete USA (viáticos, vuelos, permisos, seguro, placas, gastos generales, reparación, pago operador, etc.) se desglosa arriba por gasto — se suman solos al total. Importación, flete Mx y repuve/título van aquí abajo"
                 }
               />
               {!esServicio && (
@@ -492,20 +492,10 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     <SyncedHiddenInput campo="costoFleteUSA" />
-                    <div className="col-span-2 grid grid-cols-3 gap-3 items-end">
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span className="text-ink-secondary">Permiso</span>
-                        <SyncedMoneyInput campo="costoPermiso" />
-                      </label>
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span className="text-ink-secondary">Seguro</span>
-                        <SyncedMoneyInput campo="costoSeguro" />
-                      </label>
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span className="text-ink-secondary">Placas</span>
-                        <SyncedMoneyInput campo="costoPlacas" />
-                      </label>
-                    </div>
+                    <SyncedHiddenInput campo="costoPermiso" />
+                    <SyncedHiddenInput campo="costoSeguro" />
+                    <SyncedHiddenInput campo="costoPlacas" />
+                    <SyncedHiddenInput campo="costoManiobras" />
                     <div className="flex flex-col gap-2">
                       <label className="flex flex-col gap-1 text-sm">
                         <span className="text-ink-secondary">Importación</span>
@@ -516,10 +506,6 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                         <SyncedMoneyInput campo="costoBondCanada" className="rounded-md border border-border px-2 py-1.5 text-xs" />
                       </label>
                     </div>
-                    <label className="flex flex-col gap-1 text-sm">
-                      <span className="text-ink-secondary">Maniobra/Reparación</span>
-                      <SyncedMoneyInput campo="costoManiobras" />
-                    </label>
                     <label className="flex flex-col gap-1 text-sm">
                       <span className="text-ink-secondary">Flete México</span>
                       <SyncedMoneyInput campo="costoFleteMx" />

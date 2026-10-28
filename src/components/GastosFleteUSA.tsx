@@ -14,18 +14,15 @@ export interface GastoFleteUSAItem {
   paymentOrderId: string | null;
 }
 
-const TIPOS = ["Viáticos efectivo", "Vuelos", "Gastos generales", "Pago operador"] as const;
-
 function dateInputValue(d: Date) {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-// Desglose de Flete USA en varios conceptos (viáticos, vuelos, gastos
-// generales, pago a operador) que se van sumando — el total se guarda en
-// Shipment.costoFleteUSA automáticamente (ver recalcularCostoFleteUSA).
-// Permiso, Seguro, Placas y Maniobra/Reparación NO entran aquí: siguen
-// siendo montos aparte, igual que siempre, porque se pueden pagar por
-// separado en una orden de pago.
+// Desglose de Flete USA en gastos sueltos (sin categorías fijas — todos
+// cuentan igual: viáticos, vuelos, permisos, seguro, placas, gastos
+// generales, reparación, pago operador, etc.) que se van sumando — el
+// total se guarda en Shipment.costoFleteUSA automáticamente (ver
+// recalcularCostoFleteUSA).
 export default function GastosFleteUSA({
   shipmentId,
   gastos,
@@ -38,7 +35,6 @@ export default function GastosFleteUSA({
   soloLectura: boolean;
 }) {
   const [agregando, setAgregando] = useState(false);
-  const [tipo, setTipo] = useState<string>(TIPOS[0]);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +45,6 @@ export default function GastosFleteUSA({
       try {
         await agregarGastoFleteUSA(shipmentId, fd);
         setAgregando(false);
-        setTipo(TIPOS[0]);
         formEl.reset();
       } catch {
         setError("No se pudo agregar. Revisa el monto.");
@@ -121,31 +116,14 @@ export default function GastosFleteUSA({
             >
               <div className="grid grid-cols-2 gap-2">
                 <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-ink-muted">Concepto</span>
-                  <select
-                    name="tipo"
-                    value={tipo}
-                    onChange={(e) => setTipo(e.target.value)}
-                    className="rounded-md border border-border px-2 py-1.5 text-sm"
-                  >
-                    {TIPOS.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
+                  <span className="text-ink-muted">Concepto / nota (opcional)</span>
+                  <input name="concepto" placeholder="ej. viáticos, vuelos, permiso, seguro, placas, operador..." className="rounded-md border border-border px-2 py-1.5 text-sm" />
                 </label>
                 <label className="flex flex-col gap-1 text-xs">
                   <span className="text-ink-muted">Monto</span>
                   <MoneyInput name="monto" className="rounded-md border border-border px-2 py-1.5 text-sm" />
                 </label>
               </div>
-              {tipo === "Pago operador" && (
-                <label className="flex flex-col gap-1 text-xs">
-                  <span className="text-ink-muted">Nombre del operador</span>
-                  <input name="detalle" className="rounded-md border border-border px-2 py-1.5 text-sm" />
-                </label>
-              )}
               <label className="flex flex-col gap-1 text-xs">
                 <span className="text-ink-muted">Fecha</span>
                 <input type="date" name="fecha" defaultValue={dateInputValue(new Date())} className="rounded-md border border-border px-2 py-1.5 text-sm" />
