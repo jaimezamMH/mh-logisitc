@@ -556,7 +556,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                         {montosPorSlotFleteUSA.map(({ slot, monto }) => (
                           <label key={slot.key} className="flex items-center justify-between gap-2 text-sm rounded-lg border border-border px-3 py-2">
                             <span className="flex items-center gap-2 text-ink-secondary shrink-0">
-                              <input type="checkbox" name={`incluirFleteUSA_${slot.key}`} />
+                              <input type="checkbox" name={`incluirFleteUSA_${slot.key}`} data-monto={monto} />
                               {slot.label}
                             </span>
                             <span className="w-28 text-right text-sm font-medium text-ink-primary">{formatMXN(monto)}</span>

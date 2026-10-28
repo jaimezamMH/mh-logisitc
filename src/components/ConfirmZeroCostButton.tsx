@@ -25,10 +25,10 @@ export default function ConfirmZeroCostButton({
           const v = limpio ? Number(limpio) : 0;
           return suma + (Number.isFinite(v) ? v : 0);
         }, 0);
-        // Cuando Flete USA viene desglosado en gastos individuales (viáticos,
-        // vuelos, comisión...), no hay un campo "costoFleteUSA" en este
-        // formulario — se suman los gastos marcados en su lugar.
-        form.querySelectorAll('input[name^="gasto_"]:checked').forEach((el) => {
+        // Cuando Flete USA viene desglosado en conceptos fijos (viáticos,
+        // vuelos, seguro/permiso/placas...), no hay un campo "costoFleteUSA"
+        // en este formulario — se suman las casillas marcadas en su lugar.
+        form.querySelectorAll('input[name^="incluirFleteUSA_"]:checked').forEach((el) => {
           const v = Number((el as HTMLElement).dataset.monto ?? "0");
           if (Number.isFinite(v)) total += v;
         });
