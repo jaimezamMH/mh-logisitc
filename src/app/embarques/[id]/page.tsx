@@ -574,7 +574,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                     )}
                     {[
                       { check: "incluirImportacion", campo: "costoImportacion", label: "Importación / Aduana", siempre: true },
-                      { check: "incluirManiobras", campo: "costoManiobras", label: "Maniobra/Reparación", siempre: false },
+                      { check: "incluirManiobras", campo: "costoManiobras", label: "Maniobra/Reparación", siempre: true },
                       { check: "incluirFleteMx", campo: "costoFleteMx", label: "Flete México", siempre: true },
                       { check: "incluirPermiso", campo: "costoPermiso", label: "Permiso", siempre: false },
                       { check: "incluirSeguro", campo: "costoSeguro", label: "Seguro", siempre: false },
