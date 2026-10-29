@@ -47,6 +47,16 @@ export default function GastosFleteUSA({
   // Gastos que no son ninguno de los 6 conceptos fijos (ej. un monto
   // previo sin desglosar de antes de este cambio) — se muestran aparte.
   const otros = gastos.filter((g) => !FLETE_USA_SLOTS.some((slot) => gastoFleteUSAPerteneceASlot(g.concepto, slot.key)));
+  const otrosSinPagar = otros.filter((g) => !g.paymentOrderId);
+
+  // Gastos ya incluidos en una orden de pago — el cuadro de captura de
+  // arriba solo refleja lo que falta por pagar, así que sin esto lo ya
+  // pagado desaparecía de la vista (bug reportado: "ya la pagué pero no
+  // lo veo a la vista").
+  const pagados = gastos.filter((g) => g.paymentOrderId);
+  const totalPagado = pagados.reduce((a, g) => a + g.monto, 0);
+  const totalSinPagar = gastos.filter((g) => !g.paymentOrderId).reduce((a, g) => a + g.monto, 0);
+  const pagoCompleto = totalPagado > 0 && totalSinPagar <= 0;
 
   function guardar(formEl: HTMLFormElement) {
     const fd = new FormData(formEl);
@@ -129,16 +139,16 @@ export default function GastosFleteUSA({
         </form>
       )}
 
-      {otros.length > 0 && (
+      {otrosSinPagar.length > 0 && (
         <ul className="space-y-1.5 pt-1 border-t border-border">
-          {otros.map((g) => (
+          {otrosSinPagar.map((g) => (
             <li key={g.id} className="flex items-center justify-between gap-2 text-xs pt-1.5">
               <span className="text-ink-secondary truncate">
                 {g.concepto} <span className="text-ink-muted">· {formatFecha(g.fecha)}</span>
               </span>
               <span className="flex items-center gap-2 shrink-0">
                 <span className="text-ink-primary font-medium">{formatMXN(g.monto)}</span>
-                {!soloLectura && !g.paymentOrderId && (
+                {!soloLectura && (
                   <button
                     type="button"
                     onClick={() => eliminar(g.id)}
@@ -149,11 +159,31 @@ export default function GastosFleteUSA({
                     <Trash2 size={12} />
                   </button>
                 )}
-                {g.paymentOrderId && <span className="text-ink-muted">(ya en una orden)</span>}
               </span>
             </li>
           ))}
         </ul>
+      )}
+
+      {pagados.length > 0 && (
+        <div className="space-y-1.5 pt-2 border-t border-border">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-emerald-700">
+              {pagoCompleto ? "Pago completo de Flete USA" : "Ya pagado"}
+            </span>
+            <span className="text-xs font-semibold text-emerald-700">{formatMXN(totalPagado)}</span>
+          </div>
+          <ul className="space-y-1">
+            {pagados.map((g) => (
+              <li key={g.id} className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-ink-secondary truncate">
+                  {g.concepto} <span className="text-ink-muted">· {formatFecha(g.fecha)}</span>
+                </span>
+                <span className="text-ink-primary font-medium shrink-0">{formatMXN(g.monto)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
