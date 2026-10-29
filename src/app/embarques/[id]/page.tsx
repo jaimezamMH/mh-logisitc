@@ -499,7 +499,6 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                     <SyncedHiddenInput campo="costoPermiso" />
                     <SyncedHiddenInput campo="costoSeguro" />
                     <SyncedHiddenInput campo="costoPlacas" />
-                    <SyncedHiddenInput campo="costoManiobras" />
                     <div className="flex flex-col gap-2">
                       <label className="flex flex-col gap-1 text-sm">
                         <span className="text-ink-secondary">Importación</span>
@@ -508,6 +507,10 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                       <label className="flex flex-col gap-1 text-xs">
                         <span className="text-ink-muted">Bond/Canadá (solo si cruza de Canadá a USA, si no deja $0)</span>
                         <SyncedMoneyInput campo="costoBondCanada" className="rounded-md border border-border px-2 py-1.5 text-xs" />
+                      </label>
+                      <label className="flex flex-col gap-1 text-sm">
+                        <span className="text-ink-secondary">Maniobra/Reparación</span>
+                        <SyncedMoneyInput campo="costoManiobras" />
                       </label>
                     </div>
                     <label className="flex flex-col gap-1 text-sm">
