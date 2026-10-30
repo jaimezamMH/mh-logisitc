@@ -317,12 +317,23 @@ const cuentaSchema = z.object({
   predeterminada: z.union([z.boolean(), z.number()]).optional().transform((v) => v === true || v === 1),
 });
 
-const proveedorSchema = z.object({
-  id: z.union([z.string(), z.number()]).transform((v) => String(v).trim()),
-  nombre: z.string().trim().min(1),
-  activo: z.union([z.boolean(), z.number()]).optional().transform((v) => v === undefined || v === true || v === 1),
-  cuentas: z.array(cuentaSchema).optional().default([]),
-});
+// El ERP identifica al proveedor con `proveedorId` (se acepta `id` por si cambia).
+const proveedorSchema = z
+  .object({
+    proveedorId: z.union([z.string(), z.number()]).optional(),
+    id: z.union([z.string(), z.number()]).optional(),
+    nombre: z.string().trim().min(1),
+    activo: z.union([z.boolean(), z.number()]).optional().transform((v) => v === undefined || v === true || v === 1),
+    cuentas: z.array(cuentaSchema).nullish().transform((v) => v ?? []),
+  })
+  .transform((p, ctx) => {
+    const id = String(p.proveedorId ?? p.id ?? "").trim();
+    if (!id) {
+      ctx.addIssue({ code: "custom", message: "falta proveedorId" });
+      return z.NEVER;
+    }
+    return { id, nombre: p.nombre, activo: p.activo, cuentas: p.cuentas };
+  });
 
 const CLAVE_PROVEEDORES = "proveedores";
 
@@ -381,7 +392,14 @@ export async function sincronizarProveedores(opciones: { forzar?: boolean; rapid
     });
     return { ok: true, actualizados: lista.length };
   } catch (err) {
-    const error = (err instanceof z.ZodError ? "El catálogo del ERP llegó con un formato inesperado" : mensajeError(err)).slice(0, 500);
+    // Del error de formato solo se guarda el campo que falló, nunca su valor
+    // (los datos pueden traer cuentas bancarias).
+    const primero = err instanceof z.ZodError ? err.issues[0] : undefined;
+    const error = (
+      primero
+        ? `El catálogo del ERP llegó con un formato inesperado (${primero.path.join(".") || "raíz"}: ${primero.message})`
+        : mensajeError(err)
+    ).slice(0, 500);
     await prisma.integracionEstado
       .upsert({
         where: { clave: CLAVE_PROVEEDORES },
