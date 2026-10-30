@@ -170,7 +170,15 @@ export async function llamarERP<T>(op: OpcionesLlamada): Promise<T> {
 
       const legible = mensajeDeErrorFrappe(cuerpo) ?? texto.slice(0, 300);
       if (status === 401 || status === 403) {
-        ultimoError = new ErpError("El ERP rechazó las credenciales de MH Logística (403). Revisa ERP_API_KEY / ERP_API_SECRET.", status, false);
+        // Frappe también responde 403 por falta de permisos sobre un documento,
+        // no solo por llaves incorrectas: se muestra lo que dijo el ERP.
+        ultimoError = new ErpError(
+          legible
+            ? `El ERP respondió ${status}: ${legible}`
+            : `El ERP respondió ${status} sin detalle. Revisa ERP_API_KEY / ERP_API_SECRET y los permisos del usuario de integración.`,
+          status,
+          false
+        );
       } else if (status >= 500) {
         ultimoError = new ErpError(`El ERP respondió ${status}${legible ? `: ${legible}` : ""}`, status, true);
       } else {
