@@ -158,6 +158,7 @@ async function construirPayloadOrden(orderId: string, estatusPago?: string) {
       costos: {
         fleteUSA: order.costoFleteUSA,
         importacion: order.costoImportacion,
+        bondCanada: order.costoBondCanada,
         maniobras: order.costoManiobras,
         fleteMx: order.costoFleteMx,
         permiso: order.costoPermiso,

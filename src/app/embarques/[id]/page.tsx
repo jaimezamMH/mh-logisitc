@@ -575,7 +575,6 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
               />
               <div className="p-5 space-y-4">
                 <form action={generarOrdenDePago.bind(null, shipment.id)} className="space-y-3">
-                  <SyncedHiddenInput campo="costoBondCanada" />
                   <div className="space-y-1.5">
                     {fleteUSAItemizado ? (
                       <>
@@ -600,6 +599,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                     )}
                     {[
                       { check: "incluirImportacion", campo: "costoImportacion", label: "Importación / Aduana", siempre: true },
+                      { check: "incluirBondCanada", campo: "costoBondCanada", label: "Bond/Canadá", siempre: false },
                       { check: "incluirManiobras", campo: "costoManiobras", label: "Maniobra/Reparación", siempre: true },
                       { check: "incluirFleteMx", campo: "costoFleteMx", label: "Flete México", siempre: true },
                       { check: "incluirPermiso", campo: "costoPermiso", label: "Permiso", siempre: false },
@@ -617,9 +617,6 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                         <span className="flex items-center gap-2 text-ink-secondary shrink-0">
                           <input type="checkbox" name={c.check} />
                           {c.label}
-                          {c.campo === "costoImportacion" && shipment.costoBondCanada > 0 && (
-                            <span className="text-xs text-ink-muted">(incluye Bond/Canadá)</span>
-                          )}
                         </span>
                         <SyncedMoneyInput
                           campo={c.campo as CostoCampo}

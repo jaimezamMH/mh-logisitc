@@ -27,6 +27,7 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
     ? [
         { label: "Flete USA", valor: order.costoFleteUSA },
         { label: "Importación / Aduana", valor: order.costoImportacion },
+        { label: "Bond/Canadá", valor: order.costoBondCanada },
         { label: "Maniobra/Reparación", valor: order.costoManiobras },
         { label: "Flete México", valor: order.costoFleteMx },
         { label: "Permiso", valor: order.costoPermiso },
