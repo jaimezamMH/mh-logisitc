@@ -73,9 +73,11 @@ type ConCostos = {
   costoFleteUSA: number;
   costoImportacion: number;
   // Bond/Canadá: trámite para cruzar de Canadá a USA, solo aplica a esas
-  // unidades (en las demás queda en 0). No es un concepto aparte — se suma
-  // directo a Importación. Opcional porque las PaymentOrder no tienen este
-  // campo propio (ya viene pre-sumado en su costoImportacion al generarse).
+  // unidades (en las demás queda en 0). Se suma junto con Importación para
+  // el desglose de "costo de importación" en los reportes. Opcional porque
+  // las órdenes de pago viejas no tienen este campo (ese monto quedó
+  // pre-sumado dentro de su costoImportacion al generarse, antes de que
+  // Bond/Canadá fuera un concepto aparte); las nuevas sí lo traen.
   costoBondCanada?: number;
   costoManiobras: number;
   costoFleteMx: number;

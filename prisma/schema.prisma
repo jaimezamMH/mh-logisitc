@@ -152,6 +152,7 @@ model PaymentOrder {
   generadaPor       String?
   costoFleteUSA     Float
   costoImportacion  Float
+  costoBondCanada   Float    @default(0)
   costoManiobras    Float
   costoFleteMx      Float
   costoPermiso      Float

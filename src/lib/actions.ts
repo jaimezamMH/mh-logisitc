@@ -454,6 +454,7 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
   // aquí mismo, que se guarda en el equipo aunque el concepto esté desmarcado.
   const OTROS_CONCEPTOS = [
     { campo: "costoImportacion", check: "incluirImportacion", label: "Importación / Aduana" },
+    { campo: "costoBondCanada", check: "incluirBondCanada", label: "Bond/Canadá" },
     { campo: "costoManiobras", check: "incluirManiobras", label: "Maniobra/Reparación" },
     { campo: "costoFleteMx", check: "incluirFleteMx", label: "Flete México" },
     { campo: "costoPermiso", check: "incluirPermiso", label: "Permiso" },
@@ -469,13 +470,6 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
       ? num(formData, c.campo)
       : (s[c.campo as keyof typeof s] as number);
   }
-  // Bond/Canadá no es un concepto aparte en la orden — se guarda en el
-  // equipo y se suma directo a Importación (ver abajo), igual que Flete USA.
-  const valorBondCanada = formData.get("costoBondCanada");
-  const montoBondCanada = typeof valorBondCanada === "string" && valorBondCanada.trim() !== ""
-    ? num(formData, "costoBondCanada")
-    : s.costoBondCanada;
-  costosActualizados.costoBondCanada = montoBondCanada;
   const shipmentActualizado = await prisma.shipment.update({
     where: { id: shipmentId },
     data: costosActualizados,
@@ -485,6 +479,7 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
   const montos: Record<string, number> = {
     costoFleteUSA: incluirFleteUSA ? montoFleteUSA : 0,
     costoImportacion: 0,
+    costoBondCanada: 0,
     costoManiobras: 0,
     costoFleteMx: 0,
     costoPermiso: 0,
@@ -497,8 +492,6 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
   for (const c of OTROS_CONCEPTOS) {
     if (formData.get(c.check) === "on") {
       montos[c.campo] = shipmentActualizado[c.campo as keyof typeof shipmentActualizado] as number;
-      // Bond/Canadá viaja pegado a Importación (no tiene su propio check).
-      if (c.campo === "costoImportacion") montos[c.campo] += shipmentActualizado.costoBondCanada;
       etiquetas.push(c.label);
     }
   }
@@ -527,6 +520,7 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
       notas,
       costoFleteUSA: montos.costoFleteUSA,
       costoImportacion: montos.costoImportacion,
+      costoBondCanada: montos.costoBondCanada,
       costoManiobras: montos.costoManiobras,
       costoFleteMx: montos.costoFleteMx,
       costoPermiso: montos.costoPermiso,

@@ -28,6 +28,7 @@ export async function enviarOrdenAlERP(orderId: string): Promise<void> {
       costos: {
         fleteUSA: order.costoFleteUSA,
         importacion: order.costoImportacion,
+        bondCanada: order.costoBondCanada,
         maniobras: order.costoManiobras,
         fleteMx: order.costoFleteMx,
         permiso: order.costoPermiso,
