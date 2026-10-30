@@ -5,12 +5,24 @@ import CostosEditableTable from "@/components/CostosEditableTable";
 import Buscador from "@/components/Buscador";
 import { prisma } from "@/lib/prisma";
 import { formatFecha, formatMXN, coincideBusqueda } from "@/lib/constants";
-import { cancelarOrdenDePago, eliminarOrdenDePago, marcarOrdenPagada, generarOrdenDePagoGeneral } from "@/lib/actions";
+import { after } from "next/server";
+import {
+  cancelarOrdenDePago,
+  eliminarOrdenDePago,
+  generarOrdenDePagoGeneral,
+  actualizarCatalogoProveedores,
+} from "@/lib/actions";
+import {
+  sincronizarProveedores,
+  getOpcionesProveedores,
+  getEstadoProveedores,
+  reintentarOrdenesNoSincronizadas,
+} from "@/lib/erp";
 import { esSoloLectura } from "@/lib/auth-server";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import GastoGeneralForm from "@/components/GastoGeneralForm";
 import UserSelect from "@/components/UserSelect";
-import BancoSelect from "@/components/BancoSelect";
+import ProveedorCuentaSelect from "@/components/ProveedorCuentaSelect";
 import { AlertTriangle, FileClock, Layers, Printer } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -62,10 +74,28 @@ export default async function CostosPage({
   const [shipmentsTodos, ordenesTodas] = await Promise.all([
     prisma.shipment.findMany({
       orderBy: { updatedAt: "desc" },
-      include: { _count: { select: { paymentOrders: true, gastosFleteUSA: true } } },
+      include: { _count: { select: { paymentOrders: { where: { eliminadaAt: null } }, gastosFleteUSA: true } } },
     }),
-    prisma.paymentOrder.findMany({ include: { shipment: true }, orderBy: { fechaGenerada: "desc" } }),
+    prisma.paymentOrder.findMany({ where: { eliminadaAt: null }, include: { shipment: true }, orderBy: { fechaGenerada: "desc" } }),
   ]);
+
+  // Órdenes que el ERP no ha confirmado (regla D12): se muestran arriba y se
+  // reintentan solas en segundo plano, a lo más cada 5 minutos.
+  const noSincronizadas = ordenesTodas.filter((o) => !o.erpEnviado && o.estatusPago === "Pendiente");
+  if (!soloLectura && noSincronizadas.length > 0) {
+    after(async () => {
+      await reintentarOrdenesNoSincronizadas();
+    });
+  }
+
+  if (!soloLectura) await sincronizarProveedores({ rapido: true });
+  const [opcionesProveedores, estadoProveedores] = soloLectura
+    ? [[], null]
+    : await Promise.all([getOpcionesProveedores(), getEstadoProveedores()]);
+  const ultimaSyncProveedores =
+    estadoProveedores && estadoProveedores.ultimaVez.getTime() > 0
+      ? estadoProveedores.ultimaVez.toLocaleString("es-MX", { timeZone: "America/Hermosillo", dateStyle: "short", timeStyle: "short" })
+      : null;
 
   const activos = shipmentsTodos.filter((s) => s.estatus !== "Entregado");
   const sinCostos = activos.filter(
@@ -100,6 +130,27 @@ export default async function CostosPage({
         <div className="flex justify-end">
           <Buscador />
         </div>
+        {noSincronizadas.length > 0 && (
+          <div className="rounded-xl bg-red-50 text-red-700 text-sm px-5 py-3">
+            <p className="font-medium">
+              {noSincronizadas.length === 1
+                ? "1 orden de pago no ha sido confirmada por el ERP"
+                : `${noSincronizadas.length} órdenes de pago no han sido confirmadas por el ERP`}
+            </p>
+            <p className="text-xs mt-1">
+              Se reintentan solas cada pocos minutos. Mientras tanto Finanzas no las ve:{" "}
+              {noSincronizadas.slice(0, 6).map((o, i) => (
+                <span key={o.id}>
+                  {i > 0 && ", "}
+                  <Link href={`/orden-pago/${o.id}`} className="underline">
+                    {o.folio}
+                  </Link>
+                </span>
+              ))}
+              {noSincronizadas.length > 6 ? "…" : ""}
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <StatCard
             label="Unidades sin costos capturados"
@@ -192,33 +243,35 @@ export default async function CostosPage({
                         >
                           {o.estatusPago}
                         </span>
+                        {!o.erpEnviado && o.estatusPago === "Pendiente" && (
+                          <p className="text-xs text-red-600 mt-1">Sin confirmar en ERP</p>
+                        )}
                       </td>
                       <td className="px-5 py-2.5">
                         {!soloLectura && (
                           <div className="flex items-center gap-3">
                             {o.estatusPago === "Pendiente" && (
-                              <>
-                                <form action={marcarOrdenPagada.bind(null, o.id)}>
-                                  <button className="text-xs text-gray-400 hover:text-brand-blue-700" title="Marcar como pagada">
-                                    Marcar pagada
-                                  </button>
-                                </form>
-                                <form action={cancelarOrdenDePago.bind(null, o.id)}>
-                                  <button className="text-xs text-gray-400 hover:text-red-600" title="Cancelar orden">
-                                    Cancelar
-                                  </button>
-                                </form>
-                              </>
+                              <form action={cancelarOrdenDePago.bind(null, o.id)}>
+                                <ConfirmSubmitButton
+                                  confirmText={`¿Cancelar la orden ${o.folio}? Se cancela también en el ERP.`}
+                                  className="text-xs text-gray-400 hover:text-red-600"
+                                  title="Cancelar orden (se confirma con el ERP)"
+                                >
+                                  Cancelar
+                                </ConfirmSubmitButton>
+                              </form>
                             )}
-                            <form action={eliminarOrdenDePago.bind(null, o.id)}>
-                              <ConfirmSubmitButton
-                                confirmText={`¿Eliminar la orden ${o.folio}? Esto no se puede deshacer.`}
-                                className="text-xs text-gray-400 hover:text-red-600"
-                                title="Eliminar orden"
-                              >
-                                Eliminar
-                              </ConfirmSubmitButton>
-                            </form>
+                            {o.estatusPago === "Cancelada" && (
+                              <form action={eliminarOrdenDePago.bind(null, o.id)}>
+                                <ConfirmSubmitButton
+                                  confirmText={`¿Eliminar la orden cancelada ${o.folio}? Dejará de mostrarse en la lista.`}
+                                  className="text-xs text-gray-400 hover:text-red-600"
+                                  title="Eliminar orden cancelada"
+                                >
+                                  Eliminar
+                                </ConfirmSubmitButton>
+                              </form>
+                            )}
                           </div>
                         )}
                       </td>
@@ -257,24 +310,13 @@ export default async function CostosPage({
                 </span>
               </label>
               <div className="pt-2 border-t border-border">
-                <p className="text-xs font-medium text-ink-muted uppercase tracking-wide mb-2">
-                  Datos bancarios para el pago (opcional)
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <BancoSelect />
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="text-ink-secondary">Nombre del titular</span>
-                    <input name="titular" className="rounded-lg border border-border px-3 py-2 text-sm" />
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="text-ink-secondary">Número de cuenta</span>
-                    <input name="numeroCuenta" className="rounded-lg border border-border px-3 py-2 text-sm" />
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="text-ink-secondary">CLABE interbancaria</span>
-                    <input name="clabe" className="rounded-lg border border-border px-3 py-2 text-sm" />
-                  </label>
-                </div>
+                <p className="text-xs font-medium text-ink-muted uppercase tracking-wide mb-2">A quién se le paga</p>
+                <ProveedorCuentaSelect
+                  opciones={opcionesProveedores}
+                  ultimaSync={ultimaSyncProveedores}
+                  errorSync={estadoProveedores?.ultimoError ?? null}
+                  accionActualizar={actualizarCatalogoProveedores}
+                />
               </div>
               <input name="notas" placeholder="Notas para administración (opcional)" className="w-full rounded-lg border border-border px-3 py-2 text-sm" />
               <button className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand-orange-500 hover:bg-brand-orange-600 text-white text-sm font-medium py-2.5">

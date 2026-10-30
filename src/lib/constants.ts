@@ -149,6 +149,15 @@ export const VENDEDORES = [
   "Carlos Campillo",
 ] as const;
 
+// Estatus de una orden de pago. Internamente se guarda "Pagado" (así están
+// las órdenes existentes y la base es compartida con producción); el ERP
+// manda "Pagada" en /api/erp/ordenes-pago/estatus y ahí se traduce.
+export const ESTATUS_PAGO = {
+  PENDIENTE: "Pendiente",
+  PAGADO: "Pagado",
+  CANCELADA: "Cancelada",
+} as const;
+
 // Conceptos comunes que componen el costo de Flete USA (no es un solo viaje,
 // son varios gastos que se van sumando) — sugerencia, no lista cerrada.
 export const CONCEPTOS_GASTO_FLETE_USA = ["Viáticos", "Vuelos", "Gastos generales", "Comisión"] as const;

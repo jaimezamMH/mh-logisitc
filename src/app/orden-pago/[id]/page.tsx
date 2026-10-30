@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatFecha, formatMXN, formatPesos } from "@/lib/constants";
 import PrintButton from "@/components/PrintButton";
-import { marcarOrdenPagada, cancelarOrdenDePago, eliminarOrdenDePago, reintentarEnvioERP } from "@/lib/actions";
+import { cancelarOrdenDePago, eliminarOrdenDePago, reintentarEnvioERP } from "@/lib/actions";
 import ConfirmSubmitButton from "@/components/ConfirmSubmitButton";
 import { esSoloLectura } from "@/lib/auth-server";
 import { ArrowLeft } from "lucide-react";
@@ -19,7 +19,7 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
     }),
     esSoloLectura(),
   ]);
-  if (!order) notFound();
+  if (!order || order.eliminadaAt) notFound();
 
   const s = order.shipment;
 
@@ -56,42 +56,52 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
               No sincronizada con ERP
             </span>
           )}
-          {!soloLectura && !order.erpEnviado && (
+          {!soloLectura && !order.erpEnviado && order.estatusPago === "Pendiente" && (
             <form action={reintentarEnvioERP.bind(null, order.id)}>
               <button className="rounded-lg border border-border text-sm px-4 py-2 hover:bg-surface-muted">
                 Reintentar envío a ERP
               </button>
             </form>
           )}
-          {!soloLectura && (
-            <>
-              {order.estatusPago === "Pendiente" && (
-                <>
-                  <form action={cancelarOrdenDePago.bind(null, order.id)}>
-                    <button className="rounded-lg border border-border text-sm px-4 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200">
-                      Cancelar orden
-                    </button>
-                  </form>
-                  <form action={marcarOrdenPagada.bind(null, order.id)}>
-                    <button className="rounded-lg border border-border text-sm px-4 py-2 hover:bg-surface-muted">
-                      Marcar como pagada
-                    </button>
-                  </form>
-                </>
-              )}
-              <form action={eliminarOrdenDePago.bind(null, order.id)}>
-                <ConfirmSubmitButton
-                  confirmText={`¿Eliminar la orden ${order.folio}? Esto no se puede deshacer.`}
-                  className="rounded-lg border border-border text-sm px-4 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
-                >
-                  Eliminar
-                </ConfirmSubmitButton>
-              </form>
-            </>
+          {!soloLectura && order.estatusPago === "Pendiente" && (
+            <form action={cancelarOrdenDePago.bind(null, order.id)}>
+              <ConfirmSubmitButton
+                confirmText={`¿Cancelar la orden ${order.folio}? Se cancela también en el ERP; si Finanzas ya la pagó, no se podrá.`}
+                className="rounded-lg border border-border text-sm px-4 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+              >
+                Cancelar orden
+              </ConfirmSubmitButton>
+            </form>
+          )}
+          {!soloLectura && order.estatusPago === "Cancelada" && (
+            <form action={eliminarOrdenDePago.bind(null, order.id)}>
+              <ConfirmSubmitButton
+                confirmText={`¿Eliminar la orden cancelada ${order.folio}? Dejará de mostrarse en las listas.`}
+                className="rounded-lg border border-border text-sm px-4 py-2 text-gray-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+              >
+                Eliminar
+              </ConfirmSubmitButton>
+            </form>
           )}
           <PrintButton />
         </div>
       </div>
+
+      {(order.erpError || order.erpAviso || order.estatusPago === "Pendiente") && (
+        <div className="no-print max-w-3xl mx-auto mt-6 space-y-2 text-sm">
+          {order.erpError && (
+            <p className="rounded-lg bg-red-50 text-red-700 px-4 py-2.5">{order.erpError}</p>
+          )}
+          {order.erpAviso && (
+            <p className="rounded-lg bg-brand-orange-100 text-brand-orange-700 px-4 py-2.5">Aviso del ERP: {order.erpAviso}</p>
+          )}
+          {order.estatusPago === "Pendiente" && (
+            <p className="text-ink-muted px-1">
+              El pago lo confirma Finanzas desde el ERP; en cuanto lo valide, esta orden pasa sola a pagadas.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="max-w-3xl mx-auto bg-white shadow-sm print:shadow-none my-8 print:my-0 p-10 print:p-5 print:text-sm">
         <div className="flex items-start justify-between border-b-4 border-brand-navy pb-6 mb-6 print:pb-3 print:mb-4">
@@ -204,10 +214,17 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
           </div>
         )}
 
-        {(order.monedaCuenta || order.banco || order.numeroCuenta || order.clabe || order.titular) && (
+        {(order.proveedorNombre || order.monedaCuenta || order.banco || order.numeroCuenta || order.clabe || order.titular) && (
           <div className="mb-8 print:mb-4 text-sm border border-border rounded-lg p-4 print:p-3">
             <p className="text-xs uppercase tracking-wide text-ink-muted mb-2 font-semibold">Datos bancarios para el pago</p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+              {order.proveedorNombre && (
+                <p className="col-span-2">
+                  <span className="text-ink-muted">Proveedor: </span>
+                  <span className="text-ink-primary font-medium">{order.proveedorNombre}</span>
+                  {order.proveedorId && <span className="text-ink-muted"> ({order.proveedorId})</span>}
+                </p>
+              )}
               {order.monedaCuenta && (
                 <p>
                   <span className="text-ink-muted">Cuenta en: </span>
@@ -236,7 +253,7 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
               )}
               {order.clabe && (
                 <p>
-                  <span className="text-ink-muted">CLABE: </span>
+                  <span className="text-ink-muted">CLABE / IBAN: </span>
                   <span className="text-ink-primary font-medium">{order.clabe}</span>
                 </p>
               )}
@@ -246,10 +263,62 @@ export default async function OrdenPagoPage({ params }: { params: Promise<{ id: 
                   <span className="text-ink-primary font-medium">{order.titular}</span>
                 </p>
               )}
+              {order.swift && (
+                <p>
+                  <span className="text-ink-muted">SWIFT: </span>
+                  <span className="text-ink-primary font-medium">{order.swift}</span>
+                </p>
+              )}
+              {order.routing && (
+                <p>
+                  <span className="text-ink-muted">Routing (ABA): </span>
+                  <span className="text-ink-primary font-medium">{order.routing}</span>
+                </p>
+              )}
+              {order.sucursal && (
+                <p>
+                  <span className="text-ink-muted">Sucursal: </span>
+                  <span className="text-ink-primary font-medium">{order.sucursal}</span>
+                </p>
+              )}
               {order.direccionTitular && (
                 <p>
                   <span className="text-ink-muted">Dirección del titular: </span>
                   <span className="text-ink-primary font-medium">{order.direccionTitular}</span>
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {order.estatusPago === "Pagado" && (order.fechaPago || order.erpPago || order.referenciaBancaria) && (
+          <div className="mb-8 print:mb-4 text-sm rounded-lg bg-brand-blue-50 p-4 print:p-3">
+            <p className="text-xs uppercase tracking-wide text-ink-muted mb-2 font-semibold">Pago confirmado por Finanzas</p>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+              {order.fechaPago && (
+                <p>
+                  <span className="text-ink-muted">Fecha de pago: </span>
+                  <span className="text-ink-primary font-medium">{formatFecha(order.fechaPago)}</span>
+                </p>
+              )}
+              {order.montoPagado != null && (
+                <p>
+                  <span className="text-ink-muted">Monto pagado: </span>
+                  <span className="text-ink-primary font-medium">
+                    {order.monedaPago === "MXN" ? formatPesos(order.montoPagado) : formatMXN(order.montoPagado)} {order.monedaPago ?? ""}
+                  </span>
+                </p>
+              )}
+              {order.erpPago && (
+                <p>
+                  <span className="text-ink-muted">Pago en ERP: </span>
+                  <span className="text-ink-primary font-medium">{order.erpPago}</span>
+                </p>
+              )}
+              {order.referenciaBancaria && (
+                <p>
+                  <span className="text-ink-muted">Referencia bancaria: </span>
+                  <span className="text-ink-primary font-medium">{order.referenciaBancaria}</span>
                 </p>
               )}
             </div>

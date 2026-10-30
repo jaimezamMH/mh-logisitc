@@ -69,6 +69,17 @@ model Shipment {
   // unidad (reintento, etc.), se actualiza en vez de duplicarla.
   erpId             String?  @unique
 
+  // ID del proveedor de compra en el ERP (catálogo de log_proveedores).
+  proveedorCompraId String?
+
+  // true si la unidad la dio de alta el ERP (POST /api/erp/unidades). Las
+  // que se capturan aquí (alta manual, servicio logístico, cotización) se
+  // mandan al ERP con log_unidad y ahí reciben su erpId (el "trato").
+  origenERP         Boolean  @default(false)
+  erpUnidadSincronizada   Boolean   @default(false)
+  erpUnidadError          String?
+  erpUnidadSincronizadaAt DateTime?
+
   // Precio cobrado al cliente por cada servicio logístico (solo aplica
   // cuando tipoVenta = "Servicio Logístico"; la diferencia contra el costo
   // real de arriba es la utilidad de ese servicio).
@@ -169,9 +180,22 @@ model PaymentOrder {
   banco             String?
   direccionBanco    String?
   numeroCuenta      String?
-  clabe             String?
+  clabe             String? // CLABE (MX) o IBAN — viene de clabeIban del catálogo del ERP
   titular           String?
   direccionTitular  String?
+  swift             String?
+  routing           String?
+  sucursal          String?
+
+  // Proveedor al que se le paga, elegido del catálogo del ERP
+  // (log_proveedores). Los datos bancarios de arriba se copian de la cuenta
+  // elegida de ese catálogo al generar la orden; ya no se capturan a mano.
+  proveedorId       String?
+  proveedorNombre   String?
+
+  // Parte del Flete USA que se le paga al chofer (concepto "Pago operador").
+  // Ya va incluida en costoFleteUSA y en total — es solo informativa para el ERP.
+  costoGastoAdicionalFlete Float @default(0)
 
   // Desglose de los gastos de Flete USA incluidos en esta orden (viáticos,
   // vuelos, comisión, etc. — texto simple "concepto: monto | concepto: monto"
@@ -190,8 +214,80 @@ model PaymentOrder {
   erpEnviado        Boolean   @default(false)
   erpError          String?
   erpEnviadoAt      DateTime?
+  erpPaymentEntry   String?  // payment_entry que regresa log_orden_pago
+  erpAviso          String?  // aviso del ERP (ej. cuenta bancaria no registrada)
+
+  // Pago confirmado por Finanzas desde el ERP (POST /api/erp/ordenes-pago/estatus).
+  // Ya no se marca como pagada a mano desde aquí.
+  erpPago            String?
+  fechaPago          DateTime?
+  montoPagado        Float?
+  monedaPago         String?
+  tipoCambioPago     Float?
+  referenciaBancaria String?
+
+  // Borrado lógico — solo las órdenes canceladas se pueden eliminar, y la
+  // fila se queda (el folio nunca se reutiliza).
+  eliminadaAt       DateTime?
 
   @@index([shipmentId])
+  @@index([estatusPago])
+}
+
+// Catálogo de proveedores del ERP (log_proveedores). El ERP manda: aquí solo
+// se sincroniza y se elige, no se captura a mano. id = ID del proveedor en el ERP.
+model ProveedorERP {
+  id            String              @id
+  nombre        String
+  activo        Boolean             @default(true)
+  cuentas       CuentaBancariaERP[]
+  actualizadoAt DateTime            @updatedAt
+
+  @@index([nombre])
+}
+
+// Cuentas bancarias de un proveedor del ERP. Se reemplazan completas en cada
+// sincronización de ese proveedor (el ERP no manda un ID por cuenta).
+model CuentaBancariaERP {
+  id             String       @id @default(cuid())
+  proveedorId    String
+  proveedor      ProveedorERP @relation(fields: [proveedorId], references: [id], onDelete: Cascade)
+  banco          String?
+  nombreCuenta   String?
+  numeroCuenta   String?
+  clabeIban      String?
+  swift          String?
+  routing        String?
+  sucursal       String?
+  moneda         String?
+  predeterminada Boolean      @default(false)
+
+  @@index([proveedorId])
+}
+
+// Marcas de tiempo de las sincronizaciones con el ERP (ej. clave
+// "proveedores" = última vez que se trajo el catálogo).
+model IntegracionEstado {
+  clave       String   @id
+  ultimaVez   DateTime
+  ultimoError String?
+}
+
+// Bitácora de auditoría: quién creó/canceló/eliminó cada orden y cuándo, y
+// cada llamada con el ERP (entrante o saliente) con su código de respuesta.
+// Nunca se guardan aquí tokens, llaves ni CLABE completas.
+model AuditLog {
+  id         String   @id @default(cuid())
+  fecha      DateTime @default(now())
+  usuario    String?
+  accion     String   // ej. "orden.crear", "orden.cancelar", "erp.log_orden_pago"
+  entidad    String?  // "PaymentOrder" | "Shipment" | "ERP"
+  entidadId  String?  // folio o id
+  httpStatus Int?
+  detalle    String?
+
+  @@index([fecha])
+  @@index([entidad, entidadId])
 }
 
 // Un gasto dentro de una orden de pago GENERAL (concepto "Otros" — no ligada

@@ -4,7 +4,7 @@ import TopBar from "@/components/TopBar";
 import { Card, CardHeader, StatusBadge, EmptyState, SerieTag, ClockBadge, MoneyInput } from "@/components/ui";
 import UserSelect from "@/components/UserSelect";
 import SelectOrNew from "@/components/SelectOrNew";
-import BancoSelect from "@/components/BancoSelect";
+import ProveedorCuentaSelect from "@/components/ProveedorCuentaSelect";
 import { CostosSyncProvider, SyncedMoneyInput, SyncedHiddenInput, SyncedTotal, type CostoCampo } from "@/components/CostosSync";
 import GastosFleteUSA from "@/components/GastosFleteUSA";
 import ConfirmZeroCostButton from "@/components/ConfirmZeroCostButton";
@@ -16,6 +16,7 @@ import HistorialEstatusEditable from "@/components/HistorialEstatusEditable";
 import CategoriaTipoSelect from "@/components/CategoriaTipoSelect";
 import { getShipment, getProveedores } from "@/lib/queries";
 import { esSoloLectura } from "@/lib/auth-server";
+import { sincronizarProveedores, getOpcionesProveedores, getEstadoProveedores } from "@/lib/erp";
 import {
   updateShipmentEstatusForm,
   updateShipmentInfo,
@@ -26,6 +27,7 @@ import {
   createComment,
   resolveComment,
   deleteShipment,
+  actualizarCatalogoProveedores,
 } from "@/lib/actions";
 import { ADUANAS, ESTATUS_FLOW, VENDEDORES, estatusInfo, formatFecha, formatMXN, FLETE_USA_SLOTS, gastoFleteUSAPerteneceASlot } from "@/lib/constants";
 import { calcularDuracionPorEtapa, calcularTimelineEstatus } from "@/lib/ciclo";
@@ -42,6 +44,17 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
   const { id } = await params;
   const [shipment, proveedores, soloLectura] = await Promise.all([getShipment(id), getProveedores(), esSoloLectura()]);
   if (!shipment) notFound();
+
+  // Catálogo de proveedores del ERP para la orden de pago: se refresca al
+  // abrir la unidad si pasaron más de 15 min desde la última vez.
+  if (!soloLectura) await sincronizarProveedores({ rapido: true });
+  const [opcionesProveedores, estadoProveedores] = soloLectura
+    ? [[], null]
+    : await Promise.all([getOpcionesProveedores(), getEstadoProveedores()]);
+  const ultimaSyncProveedores =
+    estadoProveedores && estadoProveedores.ultimaVez.getTime() > 0
+      ? estadoProveedores.ultimaVez.toLocaleString("es-MX", { timeZone: "America/Hermosillo", dateStyle: "short", timeStyle: "short" })
+      : null;
 
   const totalCostos =
     shipment.costoFleteUSA +
@@ -129,7 +142,7 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                 </div>
                 <div className="flex items-center gap-2">
                   <StatusBadge estatus={shipment.estatus} />
-                  {!soloLectura && (
+                  {!soloLectura && shipment._count.paymentOrders === 0 && (
                     <form action={deleteShipment.bind(null, shipment.id)}>
                       <ConfirmSubmitButton
                         confirmText={`¿Eliminar la unidad "${shipment.equipoDescripcion}" (serie ${shipment.serie})? Esto no se puede deshacer.`}
@@ -209,6 +222,16 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                   ["Agente aduanal", shipment.provAgenteAduanal],
                   ["Millas recorridas", shipment.millas > 0 ? `${shipment.millas.toLocaleString("es-MX")} mi` : null],
                   ["ID en el ERP", shipment.erpId],
+                  [
+                    "Sincronización con ERP",
+                    shipment.origenERP
+                      ? "Unidad enviada por el ERP"
+                      : shipment.erpUnidadSincronizada
+                        ? "Enviada al ERP"
+                        : shipment.erpUnidadError
+                          ? `No enviada: ${shipment.erpUnidadError}`
+                          : "Pendiente de enviar",
+                  ],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <dt className="text-xs text-ink-muted">{label}</dt>
@@ -290,10 +313,10 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
               <label className="flex flex-col gap-1 text-sm">
                 <span className="text-ink-secondary">ID en el ERP</span>
                 <input
-                  name="erpId"
-                  defaultValue={shipment.erpId ?? ""}
-                  placeholder="Se llena solo si viene del ERP"
-                  className="rounded-lg border border-border px-3 py-2 text-sm"
+                  value={shipment.erpId ?? ""}
+                  readOnly
+                  placeholder="Lo asigna el ERP"
+                  className="rounded-lg border border-border px-3 py-2 text-sm bg-surface-muted text-ink-muted"
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm">
@@ -617,34 +640,14 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
 
                   <div className="pt-2 border-t border-border">
                     <p className="text-xs font-medium text-ink-muted uppercase tracking-wide mb-2">
-                      Datos bancarios para el pago
+                      A quién se le paga
                     </p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span className="text-ink-secondary">Banco</span>
-                        <BancoSelect />
-                      </label>
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span className="text-ink-secondary">Dirección del banco</span>
-                        <input name="direccionBanco" className="rounded-lg border border-border px-3 py-2 text-sm" />
-                      </label>
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span className="text-ink-secondary">Número de cuenta</span>
-                        <input name="numeroCuenta" className="rounded-lg border border-border px-3 py-2 text-sm" />
-                      </label>
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span className="text-ink-secondary">CLABE interbancaria</span>
-                        <input name="clabe" className="rounded-lg border border-border px-3 py-2 text-sm" />
-                      </label>
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span className="text-ink-secondary">Nombre del titular</span>
-                        <input name="titular" className="rounded-lg border border-border px-3 py-2 text-sm" />
-                      </label>
-                      <label className="flex flex-col gap-1 text-sm">
-                        <span className="text-ink-secondary">Dirección del titular</span>
-                        <input name="direccionTitular" className="rounded-lg border border-border px-3 py-2 text-sm" />
-                      </label>
-                    </div>
+                    <ProveedorCuentaSelect
+                      opciones={opcionesProveedores}
+                      ultimaSync={ultimaSyncProveedores}
+                      errorSync={estadoProveedores?.ultimoError ?? null}
+                      accionActualizar={actualizarCatalogoProveedores}
+                    />
                   </div>
 
                   <input name="notas" placeholder="Notas para administración (opcional)" className="w-full rounded-lg border border-border px-3 py-2 text-sm" />
@@ -678,20 +681,22 @@ export default async function EmbarqueDetallePage({ params }: { params: Promise<
                           </span>
                           {o.estatusPago === "Pendiente" && (
                             <form action={cancelarOrdenDePago.bind(null, o.id)}>
-                              <button className="text-xs text-gray-400 hover:text-red-600" title="Cancelar orden">
+                              <button className="text-xs text-gray-400 hover:text-red-600" title="Cancelar orden (se confirma con el ERP)">
                                 Cancelar
                               </button>
                             </form>
                           )}
-                          <form action={eliminarOrdenDePago.bind(null, o.id)}>
-                            <ConfirmSubmitButton
-                              confirmText={`¿Eliminar la orden ${o.folio}? Esto no se puede deshacer.`}
-                              className="text-xs text-gray-400 hover:text-red-600"
-                              title="Eliminar orden"
-                            >
-                              Eliminar
-                            </ConfirmSubmitButton>
-                          </form>
+                          {o.estatusPago === "Cancelada" && (
+                            <form action={eliminarOrdenDePago.bind(null, o.id)}>
+                              <ConfirmSubmitButton
+                                confirmText={`¿Eliminar la orden cancelada ${o.folio}? Dejará de mostrarse en la lista.`}
+                                className="text-xs text-gray-400 hover:text-red-600"
+                                title="Eliminar orden cancelada"
+                              >
+                                Eliminar
+                              </ConfirmSubmitButton>
+                            </form>
+                          )}
                         </div>
                       </li>
                     ))}

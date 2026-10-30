@@ -1,145 +1,178 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/generated/prisma/client";
+import { verificarPeticionERP, leerJSON, respuestaError, mensajeValidacion, ipDe } from "@/lib/erp-auth";
+import { textoCorto, fechaISO, monto } from "@/lib/validacion";
+import { registrarAuditoria } from "@/lib/audit";
 
-// Endpoint para que el ERP (mhdev.posix.mx) dé de alta unidades nuevas
-// directo en MH Logística, sin que alguien las tenga que capturar dos
-// veces a mano. Abierto a propósito (sin clave) por decisión de Jaime —
-// si en algún momento se quiere cerrar, aquí es donde se agregaría la
-// verificación de un header con una clave compartida.
-//
 // POST /api/erp/unidades
-// Body (JSON), todo opcional salvo lo indicado:
+// El ERP lo llama cuando Compras da clic en "Enviar a Logística" en el Trato.
+// Requiere: Authorization: Bearer <MH_LOGISTICA_TOKEN>
+//
 // {
-//   "erpId": "123",                 // recomendado — id de la unidad en el ERP;
-//                                    // si ya existe una unidad con ese erpId,
-//                                    // se actualiza en vez de crear otra (evita
-//                                    // duplicados si el ERP reintenta el envío)
-//   "equipoDescripcion": "Grúa Titán 2016 FREIGHTLINER 10 ton",
-//   "categoria": "...",
-//   "tipoUnidad": "CAMION" | "AMARILLO",
-//   "serie": "...",
-//   "cliente": "...",
-//   "vendedor": "...",
-//   "estatus": "Pendiente",
-//   "origenCiudad": "Phoenix, AZ",
-//   "aduana": "...",
-//   "destinoCiudad": "...",
-//   "proveedorCompra": "...",
-//   "provFleteUSA": "...",
-//   "provAgenteAduanal": "...",
-//   "fechaInicio": "2026-10-23",     // fecha ISO (yyyy-mm-dd) u otro formato que Date() entienda
-//   "fechaSalidaProgramada": "...",
-//   "millas": 0,
-//   "fotoUrl": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."   // foto del equipo, como data URL (no un link externo)
+//   "erpId": "MH00250",                         // obligatorio — Trato en el ERP
+//   "equipoDescripcion": "Retroexcavadora CAT 420F",
+//   "categoria": "Retroexcavadora",
+//   "serie": "CAT0420FXXXX",
+//   "cliente": "Constructora X",                // "Inventario" si es de inventario
+//   "vendedor": "Nombre del vendedor",
+//   "origenCiudad": "Houston, TX",
+//   "proveedorCompra": "Proveedor SA",
+//   "proveedorCompraId": "PROV-0001",           // ID del proveedor en el ERP
+//   "fechaInicio": "2026-10-29",
+//   "fotoUrl": "data:image/jpeg;base64,..."     // hasta ~1.5 MB
 // }
+//
+// Upsert por erpId: si ya existe una unidad con ese erpId se actualiza (solo
+// los campos que vienen; nunca se le cambia el estatus ni el folio), si no,
+// se crea en "Pendiente". Un reenvío nunca duplica.
+//
+// Respuesta: { "ok": true, "id": "<id interno>", "folio": "MH-2026-0001", "creado": true }
+
+const MAX_FOTO = 3 * 1024 * 1024;
+
+const unidadSchema = z.object({
+  erpId: z.string({ message: "es obligatorio" }).trim().min(1, "es obligatorio").max(100),
+  equipoDescripcion: textoCorto(),
+  categoria: textoCorto(100),
+  tipoUnidad: textoCorto(50),
+  serie: textoCorto(100),
+  cliente: textoCorto(),
+  vendedor: textoCorto(150),
+  origenCiudad: textoCorto(150),
+  aduana: textoCorto(150),
+  destinoCiudad: textoCorto(150),
+  proveedorCompra: textoCorto(),
+  proveedorCompraId: textoCorto(100),
+  provFleteUSA: textoCorto(),
+  provAgenteAduanal: textoCorto(),
+  fechaInicio: fechaISO.optional(),
+  fechaSalidaProgramada: fechaISO.optional(),
+  millas: monto.optional(),
+  fotoUrl: z
+    .string()
+    .max(MAX_FOTO, "la foto excede 3 MB")
+    .regex(/^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=\s]+$/, "debe ser una data URL de imagen (data:image/jpeg;base64,...)")
+    .optional(),
+});
 
 async function nextFolio() {
-  const last = await prisma.shipment.findFirst({
-    orderBy: { folio: "desc" },
-    select: { folio: true },
-  });
+  const last = await prisma.shipment.findFirst({ orderBy: { folio: "desc" }, select: { folio: true } });
   const n = last ? parseInt(last.folio.split("-").pop() ?? "0", 10) || 0 : 0;
   return `MH-2026-${String(n + 1).padStart(4, "0")}`;
 }
 
-function str(v: unknown): string | undefined {
-  if (typeof v !== "string") return undefined;
-  const trimmed = v.trim();
-  return trimmed.length ? trimmed : undefined;
-}
-
-function num(v: unknown): number {
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function dateOrNull(v: unknown): Date | null {
-  const s = str(v);
-  if (!s) return null;
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-export async function GET() {
-  return NextResponse.json({ ok: true, info: "Endpoint para dar de alta unidades desde el ERP. Usa POST con un JSON." });
-}
-
 export async function POST(req: NextRequest) {
-  let body: Record<string, unknown>;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ ok: false, error: "Body inválido — se esperaba JSON." }, { status: 400 });
+  const bloqueo = verificarPeticionERP(req);
+  if (bloqueo) return bloqueo;
+
+  const leido = await leerJSON(req);
+  if (!leido.ok) return leido.res;
+
+  const parsed = unidadSchema.safeParse(leido.body);
+  if (!parsed.success) {
+    return respuestaError(400, `Datos inválidos — ${mensajeValidacion(parsed.error.issues)}`);
   }
+  const d = parsed.data;
 
-  const erpId = str(body.erpId);
-
-  const fotoUrl = str(body.fotoUrl);
-  if (fotoUrl && !fotoUrl.startsWith("data:image/")) {
-    return NextResponse.json(
-      { ok: false, error: "fotoUrl inválida — debe ser una data URL (data:image/...), no un link externo." },
-      { status: 400 }
-    );
-  }
-
-  const datos = {
-    equipoDescripcion: str(body.equipoDescripcion) ?? "Equipo sin descripción",
-    categoria: str(body.categoria) ?? null,
-    tipoUnidad: str(body.tipoUnidad) ?? null,
-    cliente: str(body.cliente) ?? "Sin cliente",
-    serie: str(body.serie) ?? "S/N",
-    vendedor: str(body.vendedor) ?? null,
-    estatus: str(body.estatus) ?? "Pendiente",
-    origenCiudad: str(body.origenCiudad) ?? null,
-    aduana: str(body.aduana) ?? null,
-    destinoCiudad: str(body.destinoCiudad) ?? null,
-    proveedorCompra: str(body.proveedorCompra) ?? null,
-    provFleteUSA: str(body.provFleteUSA) ?? null,
-    provAgenteAduanal: str(body.provAgenteAduanal) ?? null,
-    fechaSalidaProgramada: dateOrNull(body.fechaSalidaProgramada),
-    millas: num(body.millas),
-    ...(fotoUrl ? { fotoUrl } : {}),
+  // Solo los campos que vienen en el body (undefined = no se toca).
+  const campos = {
+    equipoDescripcion: d.equipoDescripcion,
+    categoria: d.categoria,
+    tipoUnidad: d.tipoUnidad,
+    serie: d.serie,
+    cliente: d.cliente,
+    vendedor: d.vendedor,
+    origenCiudad: d.origenCiudad,
+    aduana: d.aduana,
+    destinoCiudad: d.destinoCiudad,
+    proveedorCompra: d.proveedorCompra,
+    proveedorCompraId: d.proveedorCompraId,
+    provFleteUSA: d.provFleteUSA,
+    provAgenteAduanal: d.provAgenteAduanal,
+    fechaSalidaProgramada: d.fechaSalidaProgramada,
+    millas: d.millas,
+    fotoUrl: d.fotoUrl,
   };
 
   try {
-    let shipment;
-    let creada = true;
+    const existente = await prisma.shipment.findUnique({ where: { erpId: d.erpId }, select: { id: true } });
 
-    if (erpId) {
-      const existente = await prisma.shipment.findUnique({ where: { erpId } });
-      if (existente) {
-        creada = false;
-        shipment = await prisma.shipment.update({ where: { erpId }, data: datos });
+    let shipment;
+    let creado = false;
+    if (existente) {
+      shipment = await prisma.shipment.update({
+        where: { erpId: d.erpId },
+        data: { ...campos, ...(d.fechaInicio ? { fechaInicio: d.fechaInicio } : {}), origenERP: true },
+      });
+    } else {
+      // Dos intentos por si dos altas simultáneas toman el mismo folio.
+      for (let intento = 0; intento < 2 && !shipment; intento++) {
+        try {
+          shipment = await prisma.shipment.create({
+            data: {
+              ...campos,
+              equipoDescripcion: d.equipoDescripcion ?? "Equipo sin descripción",
+              cliente: d.cliente ?? "Sin cliente",
+              serie: d.serie ?? "S/N",
+              estatus: "Pendiente",
+              folio: await nextFolio(),
+              erpId: d.erpId,
+              origenERP: true,
+              erpUnidadSincronizada: true,
+              fechaInicio: d.fechaInicio ?? new Date(),
+            },
+          });
+          creado = true;
+        } catch (err) {
+          if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") || intento === 1) throw err;
+          // si el choque fue por erpId (el ERP reenvió al mismo tiempo), es actualización
+          const ahora = await prisma.shipment.findUnique({ where: { erpId: d.erpId } });
+          if (ahora) shipment = await prisma.shipment.update({ where: { erpId: d.erpId }, data: campos });
+        }
+      }
+      if (shipment && creado) {
+        await prisma.statusEvent.create({
+          data: {
+            shipmentId: shipment.id,
+            estatusNuevo: "Pendiente",
+            usuario: "ERP",
+            comentario: `Unidad dada de alta desde el ERP (Trato ${d.erpId})`,
+          },
+        });
       }
     }
+    if (!shipment) throw new Error("No se pudo guardar la unidad");
 
-    if (!shipment) {
-      shipment = await prisma.shipment.create({
-        data: {
-          ...datos,
-          folio: await nextFolio(),
-          erpId: erpId ?? null,
-          fechaInicio: dateOrNull(body.fechaInicio) ?? new Date(),
-        },
-      });
-
-      await prisma.statusEvent.create({
-        data: {
-          shipmentId: shipment.id,
-          estatusNuevo: shipment.estatus,
-          usuario: "ERP",
-          comentario: "Unidad dada de alta desde el ERP",
-        },
-      });
-    }
-
-    return NextResponse.json({
-      ok: true,
-      created: creada,
-      mh: { id: shipment.id, folio: shipment.folio, erpId: shipment.erpId },
+    await registrarAuditoria({
+      accion: creado ? "erp.entrante.unidad.crear" : "erp.entrante.unidad.actualizar",
+      entidad: "Shipment",
+      entidadId: shipment.folio,
+      usuario: "ERP",
+      httpStatus: creado ? 201 : 200,
+      detalle: `Trato ${d.erpId} desde ${ipDe(req)}`,
     });
+
+    revalidatePath("/");
+    revalidatePath("/operaciones");
+    revalidatePath(`/embarques/${shipment.id}`);
+
+    return NextResponse.json(
+      { ok: true, id: shipment.id, folio: shipment.folio, creado },
+      { status: creado ? 201 : 200, headers: { "Cache-Control": "no-store" } }
+    );
   } catch (err) {
-    const mensaje = err instanceof Error ? err.message : "Error desconocido";
-    return NextResponse.json({ ok: false, error: mensaje }, { status: 500 });
+    console.error("[api/erp/unidades]", err);
+    await registrarAuditoria({
+      accion: "erp.entrante.unidad.error",
+      entidad: "Shipment",
+      entidadId: d.erpId,
+      usuario: "ERP",
+      httpStatus: 500,
+      detalle: err instanceof Error ? err.message : "Error desconocido",
+    });
+    return respuestaError(500, "Error interno al guardar la unidad en MH Logística.");
   }
 }

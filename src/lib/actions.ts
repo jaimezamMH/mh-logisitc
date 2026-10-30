@@ -2,10 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { esSoloLectura } from "@/lib/auth-server";
-import { enviarOrdenAlERP } from "@/lib/erp";
-import { FLETE_USA_SLOTS, gastoFleteUSAPerteneceASlot } from "@/lib/constants";
+import { esSoloLectura, getAuthRole } from "@/lib/auth-server";
+import { enviarOrdenAlERP, cancelarOrdenEnERP, sincronizarUnidadERP, sincronizarProveedores } from "@/lib/erp";
+import { registrarAuditoria } from "@/lib/audit";
+import { redondear2 } from "@/lib/validacion";
+import { ESTATUS_PAGO, FLETE_USA_SLOTS, gastoFleteUSAPerteneceASlot } from "@/lib/constants";
 
 // Barrera real de seguridad para el acceso de "solo lectura" (Dirección): el
 // botón ya se oculta en la UI, pero esto bloquea igual si alguien manda la
@@ -15,6 +18,73 @@ async function requireFullAccess() {
   if (await esSoloLectura()) {
     throw new Error("Tu acceso es de solo lectura — no puedes hacer cambios.");
   }
+}
+
+// Para la bitácora: la app todavía no tiene usuarios individuales (solo la
+// clave de acceso completo / solo lectura), así que se registra el nombre
+// que se elige en el formulario cuando lo hay, más el tipo de acceso.
+async function usuarioBitacora(nombre?: string | null) {
+  const rol = await getAuthRole();
+  const acceso = rol === "full" ? "acceso completo" : rol === "view" ? "solo lectura" : "sin sesión";
+  return nombre ? `${nombre} (${acceso})` : acceso;
+}
+
+// Las unidades capturadas aquí (no las que mandó el ERP) se mandan al ERP con
+// log_unidad cada vez que se dan de alta o cambian. Corre después de
+// responder, para no hacer esperar a quien está capturando.
+function sincronizarUnidadDespues(shipmentId: string) {
+  after(async () => {
+    await sincronizarUnidadERP(shipmentId);
+  });
+}
+
+// Montos que se capturan a mano en la orden: nunca negativos, 2 decimales.
+function validarMontos(montos: Record<string, number>) {
+  for (const [campo, valor] of Object.entries(montos)) {
+    if (!Number.isFinite(valor) || valor < 0) {
+      throw new Error(`El monto de ${campo} no puede ser negativo.`);
+    }
+    montos[campo] = redondear2(valor);
+  }
+}
+
+// Proveedor y cuenta bancaria de la orden: salen del catálogo del ERP
+// (regla D5 — no se captura CLABE a mano). El formulario solo manda los ids;
+// los datos bancarios completos se copian aquí, del lado del servidor.
+async function datosBancariosDesdeCatalogo(formData: FormData) {
+  const proveedorId = str(formData, "proveedorId");
+  const cuentaId = str(formData, "cuentaId");
+  if (!proveedorId || !cuentaId) {
+    throw new Error("Elige el proveedor y la cuenta bancaria del catálogo del ERP.");
+  }
+  const proveedor = await prisma.proveedorERP.findUnique({ where: { id: proveedorId } });
+  if (!proveedor) throw new Error("Ese proveedor no está en el catálogo del ERP.");
+  if (!proveedor.activo) {
+    throw new Error(`El proveedor ${proveedor.nombre} está inactivo en el ERP; no se le pueden generar órdenes nuevas.`);
+  }
+  const cuenta = await prisma.cuentaBancariaERP.findFirst({ where: { id: cuentaId, proveedorId } });
+  if (!cuenta) throw new Error("La cuenta elegida no pertenece a ese proveedor.");
+
+  const moneda = str(formData, "monedaCuenta");
+  return {
+    proveedorId: proveedor.id,
+    proveedorNombre: proveedor.nombre,
+    monedaCuenta: moneda === "USD" || moneda === "MXN" ? moneda : cuenta.moneda,
+    banco: cuenta.banco,
+    numeroCuenta: cuenta.numeroCuenta,
+    clabe: cuenta.clabeIban,
+    titular: cuenta.nombreCuenta ?? proveedor.nombre,
+    swift: cuenta.swift,
+    routing: cuenta.routing,
+    sucursal: cuenta.sucursal,
+  };
+}
+
+export async function actualizarCatalogoProveedores(): Promise<void> {
+  await requireFullAccess();
+  await sincronizarProveedores({ forzar: true });
+  revalidatePath("/costos");
+  revalidatePath("/embarques/[id]", "page");
 }
 
 // Se basa en el folio más alto que exista (no en un conteo), para que no se
@@ -99,6 +169,7 @@ export async function createShipment(formData: FormData) {
       comentario: "Unidad dada de alta",
     },
   });
+  sincronizarUnidadDespues(shipment.id);
 
   revalidatePath("/");
   revalidatePath("/operaciones");
@@ -150,6 +221,7 @@ export async function crearVentaServicio(formData: FormData) {
       comentario: "Venta de servicio logístico dada de alta",
     },
   });
+  sincronizarUnidadDespues(shipment.id);
 
   revalidatePath("/");
   revalidatePath("/operaciones");
@@ -188,6 +260,8 @@ export async function updateShipmentEstatus(
       },
     }),
   ]);
+
+  sincronizarUnidadDespues(shipmentId);
 
   revalidatePath("/");
   revalidatePath("/operaciones");
@@ -279,9 +353,11 @@ export async function updateShipmentInfo(shipmentId: string, formData: FormData)
       fechaCruce: dateOrNull(formData, "fechaCruce"),
       incidencias: str(formData, "incidencias"),
       millas: num(formData, "millas"),
-      erpId: str(formData, "erpId") ?? null,
+      // erpId ya no se edita a mano: lo pone el ERP (unidades que manda) o
+      // lo regresa log_unidad como "trato" (unidades capturadas aquí).
     },
   });
+  sincronizarUnidadDespues(shipmentId);
 
   revalidatePath(`/embarques/${shipmentId}`);
   revalidatePath("/");
@@ -296,6 +372,7 @@ export async function guardarFotoEquipo(shipmentId: string, dataUrl: string): Pr
     where: { id: shipmentId },
     data: { fotoUrl: dataUrl },
   });
+  sincronizarUnidadDespues(shipmentId);
   revalidatePath(`/embarques/${shipmentId}`);
   revalidatePath("/operaciones");
   revalidatePath("/");
@@ -377,6 +454,8 @@ export async function updateShipmentCosts(shipmentId: string, formData: FormData
     },
   });
 
+  sincronizarUnidadDespues(shipmentId);
+
   revalidatePath(`/embarques/${shipmentId}`);
   revalidatePath("/costos");
   revalidatePath("/analitica");
@@ -385,7 +464,21 @@ export async function updateShipmentCosts(shipmentId: string, formData: FormData
 
 export async function deleteShipment(shipmentId: string) {
   await requireFullAccess();
+  // Borrar la unidad borraría en cascada sus órdenes de pago (y con ellas
+  // folios y pagos ya enviados al ERP). Una unidad con órdenes no se borra.
+  const ordenes = await prisma.paymentOrder.count({ where: { shipmentId } });
+  if (ordenes > 0) {
+    throw new Error("Esta unidad tiene órdenes de pago; no se puede eliminar.");
+  }
+  const s = await prisma.shipment.findUnique({ where: { id: shipmentId }, select: { folio: true, erpId: true } });
   await prisma.shipment.delete({ where: { id: shipmentId } });
+  await registrarAuditoria({
+    accion: "unidad.eliminar",
+    entidad: "Shipment",
+    entidadId: s?.folio ?? shipmentId,
+    usuario: await usuarioBitacora(),
+    detalle: s?.erpId ? `Trato ${s.erpId}` : null,
+  });
   revalidatePath("/");
   revalidatePath("/operaciones");
   redirect("/operaciones");
@@ -410,6 +503,8 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
   await requireFullAccess();
   const generadaPor = str(formData, "generadaPor") ?? "Sin especificar";
   const notas = str(formData, "notas");
+  // antes de tocar nada: proveedor y cuenta tienen que salir del catálogo
+  const datosBancarios = await datosBancariosDesdeCatalogo(formData);
 
   const s = await prisma.shipment.findUnique({
     where: { id: shipmentId },
@@ -476,6 +571,8 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
     ? num(formData, "costoBondCanada")
     : s.costoBondCanada;
   costosActualizados.costoBondCanada = montoBondCanada;
+  validarMontos(costosActualizados);
+  if (gastosMarcados.some((g) => g.monto < 0)) throw new Error("Hay gastos de Flete USA con monto negativo.");
   const shipmentActualizado = await prisma.shipment.update({
     where: { id: shipmentId },
     data: costosActualizados,
@@ -510,9 +607,16 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
         ? "Todos los conceptos"
         : etiquetas.join(" + ");
 
-  const total = Object.values(montos).reduce((a, b) => a + b, 0);
+  validarMontos(montos);
+  const total = redondear2(Object.values(montos).reduce((a, b) => a + b, 0));
   const tipoCambioTexto = str(formData, "tipoCambio");
   const tipoCambio = tipoCambioTexto ? num(formData, "tipoCambio") : null;
+
+  // Gasto del chofer (pidió Alma): la parte del Flete USA de esta orden que
+  // es "Pago operador". Ya va dentro de costoFleteUSA y del total.
+  const gastoAdicionalFlete = redondear2(
+    gastosMarcados.filter((g) => gastoFleteUSAPerteneceASlot(g.concepto, "operador")).reduce((a, g) => a + g.monto, 0)
+  );
 
   const detalleFleteUSA =
     usaGastosFleteUSA && gastosMarcados.length > 0
@@ -537,13 +641,8 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
       total,
       tipoCambio: tipoCambio && tipoCambio > 0 ? tipoCambio : null,
       detalleFleteUSA,
-      monedaCuenta: str(formData, "monedaCuenta"),
-      banco: str(formData, "banco"),
-      direccionBanco: str(formData, "direccionBanco"),
-      numeroCuenta: str(formData, "numeroCuenta"),
-      clabe: str(formData, "clabe"),
-      titular: str(formData, "titular"),
-      direccionTitular: str(formData, "direccionTitular"),
+      costoGastoAdicionalFlete: gastoAdicionalFlete,
+      ...datosBancarios,
     },
   });
 
@@ -553,6 +652,14 @@ export async function generarOrdenDePago(shipmentId: string, formData: FormData)
       data: { paymentOrderId: order.id },
     });
   }
+
+  await registrarAuditoria({
+    accion: "orden.crear",
+    entidad: "PaymentOrder",
+    entidadId: order.folio,
+    usuario: await usuarioBitacora(generadaPor),
+    detalle: `Unidad ${s.folio} · total USD ${total} · proveedor ${datosBancarios.proveedorNombre}`,
+  });
 
   await enviarOrdenAlERP(order.id);
 
@@ -621,6 +728,7 @@ export async function guardarGastosFleteUSA(shipmentId: string, formData: FormDa
   }
 
   await recalcularCostoFleteUSA(shipmentId);
+  sincronizarUnidadDespues(shipmentId);
 
   revalidatePath(`/embarques/${shipmentId}`);
   revalidatePath("/costos");
@@ -628,38 +736,94 @@ export async function guardarGastosFleteUSA(shipmentId: string, formData: FormDa
 
 export async function eliminarGastoFleteUSA(id: string) {
   await requireFullAccess();
+  const actual = await prisma.gastoFleteUSA.findUnique({ where: { id }, select: { paymentOrderId: true } });
+  // un gasto que ya va en una orden de pago es historial: no se borra
+  if (actual?.paymentOrderId) throw new Error("Ese gasto ya está incluido en una orden de pago; no se puede eliminar.");
   const gasto = await prisma.gastoFleteUSA.delete({ where: { id } });
   await recalcularCostoFleteUSA(gasto.shipmentId);
+  sincronizarUnidadDespues(gasto.shipmentId);
 
   revalidatePath(`/embarques/${gasto.shipmentId}`);
   revalidatePath("/costos");
 }
 
-export async function marcarOrdenPagada(orderId: string): Promise<void> {
-  await requireFullAccess();
-  await prisma.paymentOrder.update({
-    where: { id: orderId },
-    data: { estatusPago: "Pagado" },
-  });
-  revalidatePath("/costos");
-  revalidatePath(`/orden-pago/${orderId}`);
-}
+// "Marcar como pagada" ya no existe: el pago solo lo confirma Finanzas desde
+// el ERP (POST /api/erp/ordenes-pago/estatus).
 
+// Cancelar = reenviar la orden al ERP con estatusPago "Cancelada". Solo si el
+// ERP lo confirma se cancela aquí; si Finanzas ya la pagó, el ERP responde
+// 417 y la orden no cambia (el mensaje queda visible en la orden). Al
+// cancelar, sus gastos de Flete USA se liberan para poder incluirlos en una
+// orden nueva (con folio nuevo).
 export async function cancelarOrdenDePago(orderId: string): Promise<void> {
   await requireFullAccess();
-  await prisma.paymentOrder.update({
-    where: { id: orderId },
-    data: { estatusPago: "Cancelada" },
-  });
+  const order = await prisma.paymentOrder.findUnique({ where: { id: orderId } });
+  if (!order || order.eliminadaAt) return;
+
+  if (order.estatusPago !== ESTATUS_PAGO.PENDIENTE) {
+    await prisma.paymentOrder.update({
+      where: { id: orderId },
+      data: { erpError: `Solo se pueden cancelar órdenes pendientes (esta está "${order.estatusPago}").` },
+    });
+    redirect(`/orden-pago/${orderId}`);
+  }
+
+  const r = await cancelarOrdenEnERP(orderId);
+  const usuario = await usuarioBitacora();
+  if (!r.ok) {
+    await prisma.paymentOrder.update({
+      where: { id: orderId },
+      data: { erpError: `No se canceló: ${r.error ?? "el ERP no lo confirmó"}`.slice(0, 500) },
+    });
+    await registrarAuditoria({
+      accion: "orden.cancelar.rechazada",
+      entidad: "PaymentOrder",
+      entidadId: order.folio,
+      usuario,
+      detalle: r.error ?? null,
+    });
+    revalidatePath(`/orden-pago/${orderId}`);
+    redirect(`/orden-pago/${orderId}`);
+  }
+
+  await prisma.$transaction([
+    prisma.paymentOrder.updateMany({
+      where: { id: orderId, estatusPago: ESTATUS_PAGO.PENDIENTE },
+      data: { estatusPago: ESTATUS_PAGO.CANCELADA, erpError: null },
+    }),
+    prisma.gastoFleteUSA.updateMany({ where: { paymentOrderId: orderId }, data: { paymentOrderId: null } }),
+  ]);
+  await registrarAuditoria({ accion: "orden.cancelar", entidad: "PaymentOrder", entidadId: order.folio, usuario });
+
   revalidatePath("/costos");
   revalidatePath(`/orden-pago/${orderId}`);
+  if (order.shipmentId) revalidatePath(`/embarques/${order.shipmentId}`);
 }
 
+// Solo se eliminan órdenes canceladas, y con borrado lógico: la fila se
+// queda (con su folio) y solo deja de mostrarse. Pendientes y pagadas no se
+// eliminan.
 export async function eliminarOrdenDePago(orderId: string): Promise<void> {
   await requireFullAccess();
   const order = await prisma.paymentOrder.findUnique({ where: { id: orderId } });
-  if (!order) return;
-  await prisma.paymentOrder.delete({ where: { id: orderId } });
+  if (!order || order.eliminadaAt) return;
+
+  if (order.estatusPago !== ESTATUS_PAGO.CANCELADA) {
+    await prisma.paymentOrder.update({
+      where: { id: orderId },
+      data: { erpError: "Solo se pueden eliminar órdenes canceladas." },
+    });
+    redirect(`/orden-pago/${orderId}`);
+  }
+
+  await prisma.paymentOrder.update({ where: { id: orderId }, data: { eliminadaAt: new Date() } });
+  await registrarAuditoria({
+    accion: "orden.eliminar",
+    entidad: "PaymentOrder",
+    entidadId: order.folio,
+    usuario: await usuarioBitacora(),
+  });
+
   revalidatePath("/costos");
   if (!order.shipmentId) redirect("/costos");
   revalidatePath(`/embarques/${order.shipmentId}`);
@@ -686,7 +850,10 @@ export async function generarOrdenDePagoGeneral(formData: FormData): Promise<voi
     throw new Error("Agrega al menos un gasto con descripción y monto.");
   }
 
-  const total = items.reduce((a, it) => a + it.monto, 0);
+  if (items.some((it) => it.monto < 0)) throw new Error("Los montos no pueden ser negativos.");
+  for (const it of items) it.monto = redondear2(it.monto);
+  const datosBancarios = await datosBancariosDesdeCatalogo(formData);
+  const total = redondear2(items.reduce((a, it) => a + it.monto, 0));
   const concepto = str(formData, "concepto") || "Otros / Gastos generales";
   const tipoCambioTexto = str(formData, "tipoCambio");
   const tipoCambio = tipoCambioTexto ? num(formData, "tipoCambio") : null;
@@ -704,15 +871,17 @@ export async function generarOrdenDePagoGeneral(formData: FormData): Promise<voi
       total,
       concepto,
       tipoCambio: tipoCambio && tipoCambio > 0 ? tipoCambio : null,
-      monedaCuenta: str(formData, "monedaCuenta"),
-      banco: str(formData, "banco"),
-      direccionBanco: str(formData, "direccionBanco"),
-      numeroCuenta: str(formData, "numeroCuenta"),
-      clabe: str(formData, "clabe"),
-      titular: str(formData, "titular"),
-      direccionTitular: str(formData, "direccionTitular"),
+      ...datosBancarios,
       gastosGenerales: { create: items },
     },
+  });
+
+  await registrarAuditoria({
+    accion: "orden.crear",
+    entidad: "PaymentOrder",
+    entidadId: order.folio,
+    usuario: await usuarioBitacora(order.generadaPor),
+    detalle: `Orden general · total USD ${total} · proveedor ${datosBancarios.proveedorNombre}`,
   });
 
   await enviarOrdenAlERP(order.id);
@@ -723,6 +892,9 @@ export async function generarOrdenDePagoGeneral(formData: FormData): Promise<voi
 
 export async function reintentarEnvioERP(orderId: string): Promise<void> {
   await requireFullAccess();
+  const order = await prisma.paymentOrder.findUnique({ where: { id: orderId }, select: { estatusPago: true, eliminadaAt: true } });
+  // una orden pagada o cancelada no se vuelve a mandar desde aquí
+  if (!order || order.eliminadaAt || order.estatusPago !== ESTATUS_PAGO.PENDIENTE) return;
   await enviarOrdenAlERP(orderId);
   revalidatePath(`/orden-pago/${orderId}`);
 }
@@ -892,6 +1064,7 @@ export async function aceptarCotizacion(id: string) {
       comentario: `Unidad dada de alta a partir de la cotización ${cot.folio} (aceptada por el cliente)`,
     },
   });
+  sincronizarUnidadDespues(shipment.id);
 
   await prisma.cotizacion.update({
     where: { id: cot.id },

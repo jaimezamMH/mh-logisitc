@@ -186,7 +186,7 @@ export async function getDashboardData() {
         take: 8,
       }),
       prisma.paymentOrder.findMany({
-        where: { estatusPago: "Pendiente" },
+        where: { estatusPago: "Pendiente", eliminadaAt: null },
         include: { shipment: true },
         orderBy: { fechaGenerada: "desc" },
       }),
@@ -256,7 +256,8 @@ export async function getShipment(id: string) {
     include: {
       statusEvents: { orderBy: { fecha: "desc" } },
       comments: { orderBy: { createdAt: "desc" } },
-      paymentOrders: { orderBy: { fechaGenerada: "desc" } },
+      paymentOrders: { where: { eliminadaAt: null }, orderBy: { fechaGenerada: "desc" } },
+      _count: { select: { paymentOrders: true } },
       sales: true,
       gastosFleteUSA: { orderBy: { fecha: "desc" } },
       archivos: { orderBy: { createdAt: "desc" } },
@@ -792,7 +793,7 @@ export async function getReporteDiario(fecha: Date = new Date()) {
       orderBy: { fecha: "asc" },
     }),
     prisma.paymentOrder.findMany({
-      where: { fechaGenerada: { gte: from, lte: to } },
+      where: { fechaGenerada: { gte: from, lte: to }, eliminadaAt: null },
       include: { shipment: true },
     }),
     prisma.comment.findMany({
@@ -866,7 +867,7 @@ export async function getReporteRango(from: Date, to: Date) {
       orderBy: { fecha: "asc" },
     }),
     prisma.paymentOrder.findMany({
-      where: { fechaGenerada: { gte: from, lte: to } },
+      where: { fechaGenerada: { gte: from, lte: to }, eliminadaAt: null },
       include: { shipment: true },
     }),
     prisma.shipment.findMany({
