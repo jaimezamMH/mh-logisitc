@@ -28,7 +28,7 @@ export default async function CotizacionPage({ params }: { params: Promise<{ id:
   const total = subtotal + iva;
 
   return (
-    <div className="min-h-screen bg-gray-100 print:bg-white">
+    <div className="h-full overflow-y-auto bg-gray-100 print:bg-white">
       <div className="no-print sticky top-0 z-10 bg-white border-b border-border px-6 h-16 flex items-center justify-between flex-wrap gap-3">
         <Link href="/cotizaciones" className="flex items-center gap-2 text-sm text-ink-secondary hover:text-ink-primary">
           <ArrowLeft size={16} />
@@ -162,6 +162,13 @@ export default async function CotizacionPage({ params }: { params: Promise<{ id:
             </tr>
           </tfoot>
         </table>
+
+        {c.notas && (
+          <div className="mb-6 print:mb-3 rounded-lg border border-border p-3 print:p-2">
+            <p className="text-xs font-semibold text-ink-secondary mb-1">Comentarios</p>
+            <p className="text-sm text-ink-primary whitespace-pre-wrap">{c.notas}</p>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-10 mt-16 pt-8 print:mt-8 print:pt-3">
           <div className="text-center">

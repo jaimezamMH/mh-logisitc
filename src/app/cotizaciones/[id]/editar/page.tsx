@@ -18,7 +18,7 @@ export default async function EditarCotizacionPage({ params }: { params: Promise
   if (soloLectura) notFound();
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="h-full overflow-y-auto bg-gray-100">
       <div className="sticky top-0 z-10 bg-white border-b border-border px-6 h-16 flex items-center">
         <Link href={`/cotizaciones/${c.id}`} className="flex items-center gap-2 text-sm text-ink-secondary hover:text-ink-primary">
           <ArrowLeft size={16} />
@@ -29,7 +29,7 @@ export default async function EditarCotizacionPage({ params }: { params: Promise
       <main className="max-w-xl mx-auto my-8 px-4">
         <Card>
           <CardHeader title={`Editar cotización ${c.folio}`} subtitle="Los cambios se ven reflejados en el PDF al guardar" />
-          <form action={editarCotizacion.bind(null, c.id)} className="p-5 space-y-3">
+          <form action={editarCotizacion.bind(null, c.id)} className="p-5 pb-20 space-y-3">
             <FotoInputNueva defaultUrl={c.fotoUrl} />
 
             <label className="flex flex-col gap-1 text-sm">
@@ -96,7 +96,18 @@ export default async function EditarCotizacionPage({ params }: { params: Promise
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="text-ink-secondary">Comentarios (opcional)</span>
+              <textarea
+                name="notas"
+                defaultValue={c.notas ?? ""}
+                rows={3}
+                placeholder="Se muestran en la cotización"
+                className="rounded-lg border border-border px-3 py-2 text-sm resize-none"
+              />
+            </label>
+
+            <div className="sticky bottom-0 -mx-5 px-5 py-3 bg-white border-t border-border flex items-center gap-2 shadow-[0_-2px_8px_rgba(0,0,0,0.06)]">
               <Link
                 href={`/cotizaciones/${c.id}`}
                 className="flex-1 text-center rounded-lg border border-border text-sm font-medium py-2.5 text-ink-secondary hover:bg-gray-50"
